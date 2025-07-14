@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import axios from 'axios';
 
 const UserRegister = ({ onToast }) => {
   const [form, setForm] = useState({
@@ -30,13 +31,24 @@ const UserRegister = ({ onToast }) => {
     }
     
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      onToast('Registration successful! Welcome to CodeRiot!', 'success');
-      setForm({ username: '', email: '', password: '', confirmPassword: '' });
+    try {
+      const response = await axios.post("http://127.0.0.1:8000/api/register/", {
+        username: form.username,
+        email: form.email,
+        password: form.password,
+        confirm_password: form.confirmPassword
+      });
+      
+      if (response.status === 201) {
+        onToast('Registration successful! Please log in.', 'success');
+        setForm({ username: '', email: '', password: '', confirmPassword: '' });
+      }
+    } catch (error) {
+      console.error('Registration failed:', error);
+      onToast('Registration failed. Please try again.', 'error');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (

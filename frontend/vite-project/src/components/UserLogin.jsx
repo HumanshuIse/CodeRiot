@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { User, Lock, Eye, EyeOff } from 'lucide-react';
+import axios from 'axios';
 
 const UserLogin = ({ onToast }) => {
   const [form, setForm] = useState({
@@ -8,7 +9,7 @@ const UserLogin = ({ onToast }) => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
+  
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -22,13 +23,22 @@ const UserLogin = ({ onToast }) => {
     }
     
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      onToast('Login successful! Welcome back!', 'success');
-      setForm({ username: '', password: '' });
+    try {
+      const response = await axios.post('http://127.0.0.1:8000/api/login/', {
+        username: form.username,
+        password: form.password
+      });
+      
+      if (response.status === 200) {
+        onToast('Login successful! Welcome back!', 'success');
+        setForm({ username: '', password: '' });
+      }
+    } catch (error) {
+      console.error('Login failed:', error);
+      onToast('Login failed. Please check your credentials and try again.', 'error');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
