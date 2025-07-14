@@ -1,0 +1,16 @@
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+
+# JWT
+PyJWT>=2.8.0
+
+# Password hashing
+passlib[bcrypt]>=1.7.4
+
+# PostgreSQL database + ORM
+sqlalchemy>=2.0.30
+psycopg2-binary>=2.9.9
+
+# Optional: allow frontend to call backend
+python-multipart>=0.0.9
+python-dotenv>=1.0.1
