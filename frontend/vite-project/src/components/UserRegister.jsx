@@ -52,7 +52,7 @@ const UserRegister = ({ onToast }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 ma-4">
       <div className="space-y-4">
         <div>
           <label htmlFor="reg-username" className="block text-sm font-medium text-gray-700 mb-1">
