@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Settings, Copy, Download, RefreshCw, Code, Terminal } from 'lucide-react';
+import { Play, Settings, Copy, Download, RefreshCw, Code, Terminal, AlertCircle, CheckCircle, Clock, FileText, Eye, EyeOff, Zap, Bug } from 'lucide-react';
 
 const CodeEditor = () => {
   const [code, setCode] = useState('');
@@ -12,128 +12,419 @@ const CodeEditor = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [cursorPosition, setCursorPosition] = useState({ line: 0, column: 0 });
+  const [executionTime, setExecutionTime] = useState(0);
+  const [memoryUsage, setMemoryUsage] = useState(0);
+  const [exitCode, setExitCode] = useState(null);
+  const [hasError, setHasError] = useState(false);
+  const [errorDetails, setErrorDetails] = useState(null);
+  const [lineNumbers, setLineNumbers] = useState(true);
+  const [activeTab, setActiveTab] = useState('output');
+  const [testCases, setTestCases] = useState([]);
+  const [currentTestCase, setCurrentTestCase] = useState(0);
+  const [autoComplete, setAutoComplete] = useState(true);
+  const [wordWrap, setWordWrap] = useState(false);
   
   const editorRef = useRef(null);
   const textareaRef = useRef(null);
 
-  // Language templates and snippets
+  // Enhanced language templates with more complex examples
   const languageTemplates = {
-    javascript: `// JavaScript Code
-function hello() {
-    console.log("Hello, World!");
+    javascript: `// JavaScript - Array Sum Problem
+function arraySum(arr) {
+    return arr.reduce((sum, num) => sum + num, 0);
 }
 
-hello();`,
-    python: `# Python Code
-def hello():
-    print("Hello, World!")
+// Read input
+const input = [1, 2, 3, 4, 5];
+const result = arraySum(input);
+console.log("Sum:", result);
 
-hello()`,
-    java: `// Java Code
-public class Main {
+// Test with different inputs
+console.log("Sum of [10, 20, 30]:", arraySum([10, 20, 30]));`,
+
+    python: `# Python - Fibonacci Sequence
+def fibonacci(n):
+    if n <= 1:
+        return n
+    
+    a, b = 0, 1
+    for _ in range(2, n + 1):
+        a, b = b, a + b
+    return b
+
+# Read input
+n = int(input("Enter a number: ") or "10")
+print(f"Fibonacci({n}) = {fibonacci(n)}")
+
+# Print first n fibonacci numbers
+print("First", n, "fibonacci numbers:")
+for i in range(n):
+    print(fibonacci(i), end=" ")
+print()`,
+
+    java: `// Java - Prime Number Checker
+import java.util.Scanner;
+
+public class PrimeChecker {
+    public static boolean isPrime(int n) {
+        if (n <= 1) return false;
+        if (n <= 3) return true;
+        if (n % 2 == 0 || n % 3 == 0) return false;
+        
+        for (int i = 5; i * i <= n; i += 6) {
+            if (n % i == 0 || n % (i + 2) == 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
     public static void main(String[] args) {
-        System.out.println("Hello, World!");
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter a number: ");
+        int num = scanner.nextInt();
+        
+        if (isPrime(num)) {
+            System.out.println(num + " is a prime number");
+        } else {
+            System.out.println(num + " is not a prime number");
+        }
+        
+        // Find primes up to num
+        System.out.println("Prime numbers up to " + num + ":");
+        for (int i = 2; i <= num; i++) {
+            if (isPrime(i)) {
+                System.out.print(i + " ");
+            }
+        }
+        System.out.println();
     }
 }`,
-    cpp: `// C++ Code
+
+    cpp: `// C++ - Binary Search Implementation
 #include <iostream>
-using namespace std;
+#include <vector>
+#include <algorithm>
+
+int binarySearch(const std::vector<int>& arr, int target) {
+    int left = 0, right = arr.size() - 1;
+    
+    while (left <= right) {
+        int mid = left + (right - left) / 2;
+        
+        if (arr[mid] == target) {
+            return mid;
+        } else if (arr[mid] < target) {
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+    return -1;
+}
 
 int main() {
-    cout << "Hello, World!" << endl;
+    std::vector<int> arr = {1, 3, 5, 7, 9, 11, 13, 15, 17, 19};
+    int target = 7;
+    
+    std::cout << "Array: ";
+    for (int num : arr) {
+        std::cout << num << " ";
+    }
+    std::cout << std::endl;
+    
+    int result = binarySearch(arr, target);
+    if (result != -1) {
+        std::cout << "Element " << target << " found at index " << result << std::endl;
+    } else {
+        std::cout << "Element " << target << " not found" << std::endl;
+    }
+    
+    return 0;
+}`,
+
+    c: `// C - Sorting Algorithm (Bubble Sort)
+#include <stdio.h>
+
+void bubbleSort(int arr[], int n) {
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = 0; j < n - i - 1; j++) {
+            if (arr[j] > arr[j + 1]) {
+                // Swap elements
+                int temp = arr[j];
+                arr[j] = arr[j + 1];
+                arr[j + 1] = temp;
+            }
+        }
+    }
+}
+
+int main() {
+    int arr[] = {64, 34, 25, 12, 22, 11, 90};
+    int n = sizeof(arr) / sizeof(arr[0]);
+    
+    printf("Original array: ");
+    for (int i = 0; i < n; i++) {
+        printf("%d ", arr[i]);
+    }
+    printf("\\n");
+    
+    bubbleSort(arr, n);
+    
+    printf("Sorted array: ");
+    for (int i = 0; i < n; i++) {
+        printf("%d ", arr[i]);
+    }
+    printf("\\n");
+    
     return 0;
 }`
   };
 
-  // Syntax keywords for different languages
+  // Enhanced syntax keywords
   const languageKeywords = {
-    javascript: ['function', 'const', 'let', 'var', 'if', 'else', 'for', 'while', 'return', 'class', 'import', 'export', 'async', 'await', 'try', 'catch', 'finally', 'console', 'document', 'window'],
-    python: ['def', 'class', 'if', 'else', 'elif', 'for', 'while', 'return', 'import', 'from', 'try', 'except', 'finally', 'with', 'as', 'print', 'input', 'len', 'range', 'enumerate'],
-    java: ['public', 'private', 'protected', 'class', 'interface', 'extends', 'implements', 'static', 'final', 'abstract', 'if', 'else', 'for', 'while', 'return', 'try', 'catch', 'finally', 'System', 'String', 'int', 'double', 'boolean'],
-    cpp: ['#include', 'using', 'namespace', 'int', 'double', 'char', 'bool', 'void', 'if', 'else', 'for', 'while', 'return', 'class', 'struct', 'public', 'private', 'protected', 'cout', 'cin', 'endl', 'std']
+    javascript: ['function', 'const', 'let', 'var', 'if', 'else', 'for', 'while', 'return', 'class', 'import', 'export', 'async', 'await', 'try', 'catch', 'finally', 'console', 'document', 'window', 'Array', 'Object', 'String', 'Number', 'Boolean', 'null', 'undefined', 'true', 'false', 'this', 'new', 'typeof', 'instanceof', 'in', 'of', 'switch', 'case', 'default', 'break', 'continue'],
+    python: ['def', 'class', 'if', 'else', 'elif', 'for', 'while', 'return', 'import', 'from', 'try', 'except', 'finally', 'with', 'as', 'print', 'input', 'len', 'range', 'enumerate', 'zip', 'map', 'filter', 'lambda', 'list', 'dict', 'tuple', 'set', 'str', 'int', 'float', 'bool', 'None', 'True', 'False', 'and', 'or', 'not', 'is', 'in', 'pass', 'break', 'continue'],
+    java: ['public', 'private', 'protected', 'class', 'interface', 'extends', 'implements', 'static', 'final', 'abstract', 'if', 'else', 'for', 'while', 'return', 'try', 'catch', 'finally', 'System', 'String', 'int', 'double', 'boolean', 'char', 'byte', 'short', 'long', 'float', 'void', 'null', 'true', 'false', 'this', 'super', 'new', 'instanceof', 'switch', 'case', 'default', 'break', 'continue'],
+    cpp: ['#include', 'using', 'namespace', 'int', 'double', 'char', 'bool', 'void', 'if', 'else', 'for', 'while', 'return', 'class', 'struct', 'public', 'private', 'protected', 'cout', 'cin', 'endl', 'std', 'vector', 'string', 'const', 'static', 'virtual', 'override', 'nullptr', 'true', 'false', 'this', 'new', 'delete', 'sizeof', 'typedef', 'enum', 'union', 'switch', 'case', 'default', 'break', 'continue'],
+    c: ['#include', 'int', 'double', 'char', 'float', 'void', 'if', 'else', 'for', 'while', 'return', 'struct', 'union', 'enum', 'typedef', 'const', 'static', 'extern', 'register', 'auto', 'volatile', 'signed', 'unsigned', 'short', 'long', 'printf', 'scanf', 'malloc', 'free', 'NULL', 'sizeof', 'switch', 'case', 'default', 'break', 'continue']
   };
 
-  // Initialize with template
+  // Sample test cases
+  const sampleTestCases = {
+    javascript: [
+      { input: '[1, 2, 3, 4, 5]', expectedOutput: 'Sum: 15' },
+      { input: '[10, 20, 30]', expectedOutput: 'Sum: 60' }
+    ],
+    python: [
+      { input: '10', expectedOutput: 'Fibonacci(10) = 55' },
+      { input: '5', expectedOutput: 'Fibonacci(5) = 5' }
+    ],
+    java: [
+      { input: '17', expectedOutput: '17 is a prime number' },
+      { input: '4', expectedOutput: '4 is not a prime number' }
+    ],
+    cpp: [
+      { input: '', expectedOutput: 'Element 7 found at index 3' }
+    ],
+    c: [
+      { input: '', expectedOutput: 'Sorted array: 11 12 22 25 34 64 90' }
+    ]
+  };
+
+  // Initialize with template and test cases
   useEffect(() => {
-    setCode(languageTemplates[language]);
+    setCode(languageTemplates[language] || '');
+    setTestCases(sampleTestCases[language] || []);
+    setCurrentTestCase(0);
+    setOutput('');
+    setHasError(false);
+    setErrorDetails(null);
   }, [language]);
 
-  // Handle code change and autocompletion
+  // Advanced code execution simulation
+  const executeCode = async (inputData = '') => {
+    const startTime = Date.now();
+    
+    try {
+      // Simulate compilation time
+      await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
+      
+      // Simulate syntax/runtime errors randomly for demonstration
+      const errorChance = Math.random();
+      if (errorChance < 0.15) { // 15% chance of error
+        throw new Error('Compilation Error');
+      }
+      
+      // Simulate different types of outputs based on code content
+      let result = '';
+      let hasRuntimeError = false;
+      
+      if (code.includes('error') || code.includes('throw')) {
+        hasRuntimeError = true;
+        throw new Error('Runtime Error: Exception thrown during execution');
+      }
+      
+      // Language-specific execution simulation
+      switch (language) {
+        case 'javascript':
+          if (code.includes('arraySum')) {
+            result = 'Sum: 15\nSum of [10, 20, 30]: 60';
+          } else if (code.includes('console.log')) {
+            result = 'Output generated successfully';
+          } else {
+            result = 'JavaScript code executed';
+          }
+          break;
+          
+        case 'python':
+          if (code.includes('fibonacci')) {
+            const n = inputData || '10';
+            result = `Enter a number: ${n}\nFibonacci(${n}) = ${fibonacci(parseInt(n))}\nFirst ${n} fibonacci numbers:\n${Array.from({length: parseInt(n)}, (_, i) => fibonacci(i)).join(' ')}`;
+          } else if (code.includes('print')) {
+            result = 'Python output generated';
+          } else {
+            result = 'Python code executed';
+          }
+          break;
+          
+        case 'java':
+          if (code.includes('isPrime')) {
+            const num = inputData || '17';
+            const isPrimeNum = isPrime(parseInt(num));
+            result = `Enter a number: ${num}\n${num} is ${isPrimeNum ? 'a' : 'not a'} prime number\nPrime numbers up to ${num}:\n${getPrimesUpTo(parseInt(num)).join(' ')}`;
+          } else {
+            result = 'Java program executed successfully';
+          }
+          break;
+          
+        case 'cpp':
+          if (code.includes('binarySearch')) {
+            result = 'Array: 1 3 5 7 9 11 13 15 17 19\nElement 7 found at index 3';
+          } else {
+            result = 'C++ program executed successfully';
+          }
+          break;
+          
+        case 'c':
+          if (code.includes('bubbleSort')) {
+            result = 'Original array: 64 34 25 12 22 11 90\nSorted array: 11 12 22 25 34 64 90';
+          } else {
+            result = 'C program executed successfully';
+          }
+          break;
+          
+        default:
+          result = 'Code executed successfully';
+      }
+      
+      const endTime = Date.now();
+      setExecutionTime(endTime - startTime);
+      setMemoryUsage(Math.floor(Math.random() * 50) + 10); // Random memory usage
+      setExitCode(0);
+      setHasError(false);
+      setErrorDetails(null);
+      
+      return result;
+      
+    } catch (error) {
+      const endTime = Date.now();
+      setExecutionTime(endTime - startTime);
+      setMemoryUsage(0);
+      setExitCode(1);
+      setHasError(true);
+      
+      // Generate detailed error information
+      const errorTypes = ['SyntaxError', 'RuntimeError', 'CompileError', 'MemoryError'];
+      const errorType = errorTypes[Math.floor(Math.random() * errorTypes.length)];
+      const lineNumber = Math.floor(Math.random() * 20) + 1;
+      
+      setErrorDetails({
+        type: errorType,
+        message: error.message,
+        line: lineNumber,
+        column: Math.floor(Math.random() * 30) + 1,
+        details: `${errorType} at line ${lineNumber}: ${error.message}`
+      });
+      
+      throw error;
+    }
+  };
+
+  // Helper functions for simulation
+  const fibonacci = (n) => {
+    if (n <= 1) return n;
+    let a = 0, b = 1;
+    for (let i = 2; i <= n; i++) {
+      [a, b] = [b, a + b];
+    }
+    return b;
+  };
+
+  const isPrime = (n) => {
+    if (n <= 1) return false;
+    if (n <= 3) return true;
+    if (n % 2 === 0 || n % 3 === 0) return false;
+    for (let i = 5; i * i <= n; i += 6) {
+      if (n % i === 0 || n % (i + 2) === 0) return false;
+    }
+    return true;
+  };
+
+  const getPrimesUpTo = (n) => {
+    const primes = [];
+    for (let i = 2; i <= n; i++) {
+      if (isPrime(i)) primes.push(i);
+    }
+    return primes;
+  };
+
+  // Enhanced code change handler
   const handleCodeChange = (e) => {
     const value = e.target.value;
     setCode(value);
     
-    // Get current word for autocompletion
-    const cursorPos = e.target.selectionStart;
-    const beforeCursor = value.substring(0, cursorPos);
-    const words = beforeCursor.split(/\s+/);
-    const currentWord = words[words.length - 1];
-    
-    if (currentWord.length > 1) {
-      const matchingKeywords = languageKeywords[language].filter(keyword => 
-        keyword.toLowerCase().startsWith(currentWord.toLowerCase())
-      );
-      setSuggestions(matchingKeywords);
-      setShowSuggestions(matchingKeywords.length > 0);
-    } else {
-      setShowSuggestions(false);
+    if (autoComplete) {
+      const cursorPos = e.target.selectionStart;
+      const beforeCursor = value.substring(0, cursorPos);
+      const words = beforeCursor.split(/\s+/);
+      const currentWord = words[words.length - 1];
+      
+      if (currentWord.length > 1) {
+        const matchingKeywords = languageKeywords[language]?.filter(keyword => 
+          keyword.toLowerCase().startsWith(currentWord.toLowerCase())
+        ) || [];
+        setSuggestions(matchingKeywords);
+        setShowSuggestions(matchingKeywords.length > 0);
+      } else {
+        setShowSuggestions(false);
+      }
     }
   };
 
-  // Handle suggestion selection
-  const selectSuggestion = (suggestion) => {
-    const textarea = textareaRef.current;
-    const cursorPos = textarea.selectionStart;
-    const beforeCursor = code.substring(0, cursorPos);
-    const afterCursor = code.substring(cursorPos);
-    
-    const words = beforeCursor.split(/\s+/);
-    const currentWord = words[words.length - 1];
-    
-    const newCode = beforeCursor.substring(0, beforeCursor.length - currentWord.length) + suggestion + afterCursor;
-    setCode(newCode);
-    setShowSuggestions(false);
-  };
-
-  // Simulate code execution
+  // Run code with proper error handling
   const runCode = async () => {
     setIsRunning(true);
-    setOutput('Running...');
+    setOutput('Compiling and executing...');
+    setActiveTab('output');
     
     try {
-      // Simulate API call to execute code
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock execution results based on language
-      let mockOutput = '';
-      switch (language) {
-        case 'javascript':
-          mockOutput = 'Hello, World!\n';
-          break;
-        case 'python':
-          mockOutput = 'Hello, World!\n';
-          break;
-        case 'java':
-          mockOutput = 'Hello, World!\n';
-          break;
-        case 'cpp':
-          mockOutput = 'Hello, World!\n';
-          break;
-        default:
-          mockOutput = 'Code executed successfully!\n';
-      }
-      
-      if (input.trim()) {
-        mockOutput += `Input processed: ${input}\n`;
-      }
-      
-      setOutput(mockOutput);
+      const result = await executeCode(input);
+      setOutput(result);
     } catch (error) {
       setOutput(`Error: ${error.message}`);
     } finally {
       setIsRunning(false);
     }
+  };
+
+  // Run test cases
+  const runTestCases = async () => {
+    if (testCases.length === 0) return;
+    
+    setIsRunning(true);
+    setActiveTab('tests');
+    
+    const results = [];
+    for (let i = 0; i < testCases.length; i++) {
+      try {
+        const result = await executeCode(testCases[i].input);
+        results.push({
+          passed: result.includes(testCases[i].expectedOutput),
+          output: result,
+          expected: testCases[i].expectedOutput
+        });
+      } catch (error) {
+        results.push({
+          passed: false,
+          output: error.message,
+          expected: testCases[i].expectedOutput
+        });
+      }
+    }
+    
+    setTestCases(testCases.map((tc, i) => ({ ...tc, result: results[i] })));
+    setIsRunning(false);
   };
 
   // Copy code to clipboard
@@ -144,7 +435,13 @@ int main() {
 
   // Download code as file
   const downloadCode = () => {
-    const extensions = { javascript: 'js', python: 'py', java: 'java', cpp: 'cpp' };
+    const extensions = { 
+      javascript: 'js', 
+      python: 'py', 
+      java: 'java', 
+      cpp: 'cpp',
+      c: 'c'
+    };
     const blob = new Blob([code], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -154,7 +451,7 @@ int main() {
     URL.revokeObjectURL(url);
   };
 
-  // Handle keyboard shortcuts
+  // Enhanced keyboard shortcuts
   const handleKeyDown = (e) => {
     if (e.ctrlKey || e.metaKey) {
       switch (e.key) {
@@ -165,6 +462,10 @@ int main() {
         case 's':
           e.preventDefault();
           downloadCode();
+          break;
+        case '/':
+          e.preventDefault();
+          // Toggle comment
           break;
       }
     }
@@ -181,6 +482,16 @@ int main() {
     }
   };
 
+  // Generate line numbers
+  const generateLineNumbers = () => {
+    const lines = code.split('\n');
+    return lines.map((_, index) => (
+      <div key={index} className={`text-right pr-2 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+        {index + 1}
+      </div>
+    ));
+  };
+
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} transition-colors duration-200`}>
       {/* Header */}
@@ -191,11 +502,10 @@ int main() {
               <div className="flex items-center space-x-2">
                 <Code className={`w-6 h-6 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
                 <h1 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                  Code Editor
+                  Advanced Code Editor
                 </h1>
               </div>
               
-              {/* Language Selector */}
               <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
@@ -209,10 +519,10 @@ int main() {
                 <option value="python">Python</option>
                 <option value="java">Java</option>
                 <option value="cpp">C++</option>
+                <option value="c">C</option>
               </select>
             </div>
 
-            {/* Action Buttons */}
             <div className="flex items-center space-x-2">
               <button
                 onClick={runCode}
@@ -225,6 +535,15 @@ int main() {
                   <Play className="w-4 h-4" />
                 )}
                 <span>{isRunning ? 'Running' : 'Run'}</span>
+              </button>
+              
+              <button
+                onClick={runTestCases}
+                disabled={isRunning || testCases.length === 0}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Zap className="w-4 h-4" />
+                <span>Test</span>
               </button>
               
               <button
@@ -268,7 +587,7 @@ int main() {
       {showSettings && (
         <div className={`${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b`}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center space-x-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="flex items-center space-x-2">
                 <label className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                   Theme:
@@ -303,6 +622,44 @@ int main() {
                   {fontSize}px
                 </span>
               </div>
+              
+              <div className="flex items-center space-x-4">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={lineNumbers}
+                    onChange={(e) => setLineNumbers(e.target.checked)}
+                    className="rounded"
+                  />
+                  <span className={`text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                    Line Numbers
+                  </span>
+                </label>
+                
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={autoComplete}
+                    onChange={(e) => setAutoComplete(e.target.checked)}
+                    className="rounded"
+                  />
+                  <span className={`text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                    Auto Complete
+                  </span>
+                </label>
+                
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={wordWrap}
+                    onChange={(e) => setWordWrap(e.target.checked)}
+                    className="rounded"
+                  />
+                  <span className={`text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                    Word Wrap
+                  </span>
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -318,46 +675,56 @@ int main() {
                 Editor
               </h2>
               <div className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                Ctrl+Enter to run • Tab for indent
+                Ctrl+Enter to run • Ctrl+S to save • Tab for indent
               </div>
             </div>
             
             <div className="relative">
-              <textarea
-                ref={textareaRef}
-                value={code}
-                onChange={handleCodeChange}
-                onKeyDown={handleKeyDown}
-                className={`w-full h-96 p-4 rounded-lg border font-mono resize-none ${
-                  theme === 'dark'
-                    ? 'bg-gray-800 border-gray-700 text-white'
-                    : 'bg-white border-gray-300 text-gray-900'
-                } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                style={{ fontSize: `${fontSize}px` }}
-                placeholder="Start coding..."
-                spellCheck="false"
-              />
-              
-              {/* Autocompletion Suggestions */}
-              {showSuggestions && (
-                <div className={`absolute z-10 mt-1 w-48 ${
-                  theme === 'dark' ? 'bg-gray-700' : 'bg-white'
-                } border ${
-                  theme === 'dark' ? 'border-gray-600' : 'border-gray-200'
-                } rounded-lg shadow-lg max-h-40 overflow-y-auto`}>
-                  {suggestions.map((suggestion, index) => (
-                    <button
-                      key={index}
-                      onClick={() => selectSuggestion(suggestion)}
-                      className={`w-full px-3 py-2 text-left hover:${
-                        theme === 'dark' ? 'bg-gray-600' : 'bg-gray-100'
-                      } ${theme === 'dark' ? 'text-white' : 'text-gray-900'} transition-colors`}
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="flex">
+                {lineNumbers && (
+                  <div className={`${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'} px-2 py-4 font-mono text-sm border-r ${theme === 'dark' ? 'border-gray-600' : 'border-gray-200'}`}>
+                    {generateLineNumbers()}
+                  </div>
+                )}
+                
+                <textarea
+                  ref={textareaRef}
+                  value={code}
+                  onChange={handleCodeChange}
+                  onKeyDown={handleKeyDown}
+                  className={`flex-1 h-96 p-4 font-mono resize-none ${
+                    theme === 'dark'
+                      ? 'bg-gray-800 text-white'
+                      : 'bg-white text-gray-900'
+                  } focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    wordWrap ? 'whitespace-pre-wrap' : 'whitespace-pre'
+                  }`}
+                  style={{ fontSize: `${fontSize}px` }}
+                  placeholder="Start coding..."
+                  spellCheck="false"
+                />
+                
+                {/* Autocompletion Suggestions */}
+                {showSuggestions && (
+                  <div className={`absolute z-10 mt-1 w-48 ${
+                    theme === 'dark' ? 'bg-gray-700' : 'bg-white'
+                  } border ${
+                    theme === 'dark' ? 'border-gray-600' : 'border-gray-200'
+                  } rounded-lg shadow-lg max-h-40 overflow-y-auto`}>
+                    {suggestions.map((suggestion, index) => (
+                      <button
+                        key={index}
+                        onClick={() => selectSuggestion(suggestion)}
+                        className={`w-full px-3 py-2 text-left hover:${
+                          theme === 'dark' ? 'bg-gray-600' : 'bg-gray-100'
+                        } ${theme === 'dark' ? 'text-white' : 'text-gray-900'} transition-colors`}
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Input Section */}
@@ -380,27 +747,165 @@ int main() {
 
           {/* Output Panel */}
           <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Terminal className={`w-5 h-5 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`} />
-              <h2 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                Output
-              </h2>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Terminal className={`w-5 h-5 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`} />
+                <h2 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                  Output
+                </h2>
+              </div>
+              
+              {/* Execution Stats */}
+              {executionTime > 0 && (
+                <div className="flex items-center space-x-4 text-sm">
+                  <div className={`flex items-center space-x-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <Clock className="w-4 h-4" />
+                    <span>{executionTime}ms</span>
+                  </div>
+                  <div className={`flex items-center space-x-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <span>Memory: {memoryUsage}KB</span>
+                  </div>
+                  <div className={`flex items-center space-x-1 ${
+                    exitCode === 0 ? 'text-green-500' : 'text-red-500'
+                  }`}>
+                    {exitCode === 0 ? (
+                      <CheckCircle className="w-4 h-4" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4" />
+                    )}
+                    <span>Exit {exitCode}</span>
+                  </div>
+                </div>
+              )}
             </div>
             
+            {/* Output Tabs */}
+            <div className="flex space-x-1">
+              <button
+                onClick={() => setActiveTab('output')}
+                className={`px-3 py-1 rounded-t-lg text-sm font-medium ${
+                  activeTab === 'output'
+                    ? theme === 'dark'
+                      ? 'bg-gray-800 text-white'
+                      : 'bg-white text-gray-900 border-b-2 border-blue-500'
+                    : theme === 'dark'
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                } transition-colors`}
+              >
+                Output
+              </button>
+              <button
+                onClick={() => setActiveTab('tests')}
+                className={`px-3 py-1 rounded-t-lg text-sm font-medium ${
+                  activeTab === 'tests'
+                    ? theme === 'dark'
+                      ? 'bg-gray-800 text-white'
+                      : 'bg-white text-gray-900 border-b-2 border-blue-500'
+                    : theme === 'dark'
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                } transition-colors`}
+              >
+                Tests ({testCases.length})
+              </button>
+              {hasError && (
+                <button
+                  onClick={() => setActiveTab('errors')}
+                  className={`px-3 py-1 rounded-t-lg text-sm font-medium ${
+                    activeTab === 'errors'
+                      ? theme === 'dark'
+                        ? 'bg-gray-800 text-white'
+                        : 'bg-white text-gray-900 border-b-2 border-red-500'
+                      : 'bg-red-100 text-red-600 hover:bg-red-200'
+                  } transition-colors`}
+                >
+                  <Bug className="w-4 h-4 inline mr-1" />
+                  Errors
+                </button>
+              )}
+            </div>
+            
+            {/* Output Content */}
             <div className={`h-96 p-4 rounded-lg border ${
               theme === 'dark'
-                ? 'bg-gray-800 border-gray-700 text-green-400'
-                : 'bg-gray-900 border-gray-300 text-green-300'
+                ? 'bg-gray-800 border-gray-700'
+                : 'bg-gray-900 border-gray-300'
             } font-mono text-sm overflow-y-auto`}>
-              <pre className="whitespace-pre-wrap">
-                {output || 'Click "Run" to execute your code...'}
-              </pre>
+              {activeTab === 'output' && (
+                <pre className={`whitespace-pre-wrap ${
+                  hasError ? 'text-red-400' : 'text-green-400'
+                }`}>
+                  {output || 'Click "Run" to execute your code...'}
+                </pre>
+              )}
+              
+              {activeTab === 'tests' && (
+                <div className="space-y-3">
+                  {testCases.length === 0 ? (
+                    <div className="text-gray-400">No test cases available</div>
+                  ) : (
+                    testCases.map((testCase, index) => (
+                      <div key={index} className={`p-3 rounded border ${
+                        theme === 'dark' ? 'border-gray-600' : 'border-gray-400'
+                      }`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-gray-300">Test Case {index + 1}</span>
+                          {testCase.result && (
+                            <span className={`flex items-center space-x-1 ${
+                              testCase.result.passed ? 'text-green-400' : 'text-red-400'
+                            }`}>
+                              {testCase.result.passed ? (
+                                <CheckCircle className="w-4 h-4" />
+                              ) : (
+                                <AlertCircle className="w-4 h-4" />
+                              )}
+                              <span>{testCase.result.passed ? 'PASSED' : 'FAILED'}</span>
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-400 mb-1">Input: {testCase.input || 'None'}</div>
+                        <div className="text-sm text-gray-400 mb-1">Expected: {testCase.expectedOutput}</div>
+                        {testCase.result && (
+                          <div className="text-sm text-gray-400">Output: {testCase.result.output}</div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+              
+              {activeTab === 'errors' && errorDetails && (
+                <div className="text-red-400 space-y-2">
+                  <div className="font-bold">{errorDetails.type}</div>
+                  <div>Line {errorDetails.line}, Column {errorDetails.column}</div>
+                  <div className="text-red-300">{errorDetails.message}</div>
+                  <div className="mt-4 p-3 bg-red-900 bg-opacity-20 rounded border border-red-700">
+                    <div className="text-sm">{errorDetails.details}</div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
     </div>
   );
+};
+
+// Helper function to select suggestion
+const selectSuggestion = (suggestion) => {
+  const textarea = textareaRef.current;
+  const cursorPos = textarea.selectionStart;
+  const beforeCursor = code.substring(0, cursorPos);
+  const afterCursor = code.substring(cursorPos);
+  
+  const words = beforeCursor.split(/\s+/);
+  const currentWord = words[words.length - 1];
+  
+  const newCode = beforeCursor.substring(0, beforeCursor.length - currentWord.length) + suggestion + afterCursor;
+  setCode(newCode);
+  setShowSuggestions(false);
 };
 
 export default CodeEditor;
