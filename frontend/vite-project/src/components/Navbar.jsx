@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Menu, X, Code, Users, Trophy, User, LogOut, Terminal } from 'lucide-react';
+import { Menu, X, Code, Users, Trophy, User, LogOut, Terminal, Home as HomeIcon } from 'lucide-react';
 
 const Navbar = ({ activeTab, setActiveTab, isLoggedIn, username, onLogout }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItems = [
-    { id: 'home', label: 'Home', icon: Code },
+    { id: 'home', label: 'Home', icon: HomeIcon },
     { id: 'editor', label: 'Code Editor', icon: Terminal },
     { id: 'matchmaking', label: 'Matchmaking', icon: Users },
     { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
@@ -17,32 +17,65 @@ const Navbar = ({ activeTab, setActiveTab, isLoggedIn, username, onLogout }) => 
   };
 
   return (
-    <nav className="bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
+    <nav className="bg-black border-b border-gray-800 sticky top-0 z-50 shadow-lg font-tech">
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap');
+        .font-tech {
+          font-family: 'Rajdhani', sans-serif;
+        }
+        @font-face {
+          font-family: 'PressStart2P';
+          /* Corrected path based on your input */
+          src: url('/src/assets/fonts/PressStart2P.ttf') format('truetype'); 
+          font-weight: normal;
+          font-style: normal;
+          font-display: swap;
+        }
+        .font-pixel {
+          font-family: 'PressStart2P', 'Courier New', monospace;
+        }
+        /* Custom pixel-border for consistency with Home.jsx */
+        .pixel-border {
+          border-image: linear-gradient(45deg, #00ffff, #ff00ff) 1;
+          border-style: solid;
+          border-width: 2px;
+        }
+        /* Custom glow for consistency with Home.jsx */
+        @keyframes glow {
+          0%, 100% { box-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 15px #00ffff; }
+          50% { box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #00ffff; }
+        }
+        .animate-glow {
+          animation: glow 2s ease-in-out infinite;
+        }
+      `}</style>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <div className="flex items-center">
+          <div className="flex items-center flex-shrink-0">
             <button
               onClick={() => handleNavClick('home')}
-              className="flex items-center space-x-2 text-white hover:text-blue-400 transition-colors"
+              className="flex items-center space-x-2 text-white hover:text-cyan-400 transition-colors"
             >
-              <Code className="w-8 h-8" />
-              <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+              <div className="w-8 h-8 bg-gradient-to-r from-cyan-500 to-blue-500 flex items-center justify-center rounded-lg pixel-border animate-glow">
+                <Code className="w-4 h-4" />
+              </div>
+              <span className="text-xl font-pixel bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
                 CodeRiot
               </span>
             </button>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex flex-grow items-center justify-center space-x-6">
             {navItems.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => handleNavClick(id)}
-                className={`flex items-center space-x-1 px-3 py-2 rounded-lg transition-all duration-200 ${
+                className={`flex items-center space-x-1 px-4 py-2 rounded-xl transition-all duration-200 text-xs font-semibold uppercase ${
                   activeTab === id
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'text-gray-300 hover:text-cyan-400 hover:bg-gray-800'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -51,17 +84,17 @@ const Navbar = ({ activeTab, setActiveTab, isLoggedIn, username, onLogout }) => 
             ))}
           </div>
 
-          {/* User Section */}
-          <div className="hidden md:flex items-center space-x-4">
+          {/* User Section (Right Aligned) */}
+          <div className="hidden md:flex items-center flex-shrink-0">
             {isLoggedIn ? (
               <div className="flex items-center space-x-3">
-                <div className="flex items-center space-x-2 text-gray-300">
+                <div className="flex items-center space-x-2 text-gray-300 text-sm">
                   <User className="w-4 h-4" />
                   <span>{username}</span>
                 </div>
                 <button
                   onClick={onLogout}
-                  className="flex items-center space-x-1 px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
+                  className="flex items-center space-x-1 px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-xl transition-all duration-200 text-sm"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Logout</span>
@@ -70,7 +103,7 @@ const Navbar = ({ activeTab, setActiveTab, isLoggedIn, username, onLogout }) => 
             ) : (
               <button
                 onClick={() => handleNavClick('auth')}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all duration-200"
+                className="bg-blue-600 text-white px-6 py-2 rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-lg font-semibold uppercase text-sm"
               >
                 Get Started
               </button>
@@ -93,7 +126,7 @@ const Navbar = ({ activeTab, setActiveTab, isLoggedIn, username, onLogout }) => 
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu (remains unchanged for now) */}
       {isMobileMenuOpen && (
         <div className="md:hidden bg-gray-800 border-t border-gray-700">
           <div className="px-2 pt-2 pb-3 space-y-1">
