@@ -1,11 +1,13 @@
+// src/components/Navbar.jsx
 import React, { useState } from 'react';
-import { Menu, X, Code, Users, Trophy, User, LogOut, Terminal, Home as HomeIcon } from 'lucide-react';
+import { Menu, X, Code, Users, Trophy, User, LogOut, Terminal, Home as HomeIcon, BookOpen } from 'lucide-react'; // ✅ Import BookOpen (for Problems, even if not directly used in this pass)
 
 const Navbar = ({ activeTab, setActiveTab, isLoggedIn, username, onLogout }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItems = [
     { id: 'home', label: 'Home', icon: HomeIcon },
+    // { id: 'problems', label: 'Problems', icon: BookOpen }, // Removed as per current requirement
     { id: 'editor', label: 'Code Editor', icon: Terminal },
     { id: 'matchmaking', label: 'Matchmaking', icon: Users },
     { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
@@ -25,8 +27,7 @@ const Navbar = ({ activeTab, setActiveTab, isLoggedIn, username, onLogout }) => 
         }
         @font-face {
           font-family: 'PressStart2P';
-          /* Corrected path based on your input */
-          src: url('/src/assets/fonts/PressStart2P.ttf') format('truetype'); 
+          src: url('/src/assets/fonts/PressStart2P.ttf') format('truetype');
           font-weight: normal;
           font-style: normal;
           font-display: swap;
@@ -34,16 +35,14 @@ const Navbar = ({ activeTab, setActiveTab, isLoggedIn, username, onLogout }) => 
         .font-pixel {
           font-family: 'PressStart2P', 'Courier New', monospace;
         }
-        /* Custom pixel-border for consistency with Home.jsx */
         .pixel-border {
           border-image: linear-gradient(45deg, #00ffff, #ff00ff) 1;
           border-style: solid;
           border-width: 2px;
         }
-        /* Custom glow for consistency with Home.jsx */
         @keyframes glow {
           0%, 100% { box-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 15px #00ffff; }
-          50% { box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #00ffff; }
+          50% { box_shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #00ffff; }
         }
         .animate-glow {
           animation: glow 2s ease-in-out infinite;
@@ -88,10 +87,14 @@ const Navbar = ({ activeTab, setActiveTab, isLoggedIn, username, onLogout }) => 
           <div className="hidden md:flex items-center flex-shrink-0">
             {isLoggedIn ? (
               <div className="flex items-center space-x-3">
-                <div className="flex items-center space-x-2 text-gray-300 text-sm">
+                {/* ✅ Clickable Username for Profile */}
+                <button
+                  onClick={() => handleNavClick('user-profile')} // Navigate to user profile
+                  className="flex items-center space-x-2 text-gray-300 text-sm hover:text-cyan-400 transition-colors"
+                >
                   <User className="w-4 h-4" />
                   <span>{username}</span>
-                </div>
+                </button>
                 <button
                   onClick={onLogout}
                   className="flex items-center space-x-1 px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-xl transition-all duration-200 text-sm"
@@ -126,7 +129,7 @@ const Navbar = ({ activeTab, setActiveTab, isLoggedIn, username, onLogout }) => 
         </div>
       </div>
 
-      {/* Mobile Menu (remains unchanged for now) */}
+      {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="md:hidden bg-gray-800 border-t border-gray-700">
           <div className="px-2 pt-2 pb-3 space-y-1">
@@ -149,10 +152,14 @@ const Navbar = ({ activeTab, setActiveTab, isLoggedIn, username, onLogout }) => 
             <div className="border-t border-gray-700 pt-2 mt-2">
               {isLoggedIn ? (
                 <div className="space-y-1">
-                  <div className="flex items-center space-x-2 px-3 py-2 text-gray-300">
+                  {/* ✅ Clickable Username for Profile (Mobile) */}
+                  <button
+                    onClick={() => handleNavClick('user-profile')} // Navigate to user profile
+                    className="flex items-center space-x-2 w-full px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-all duration-200"
+                  >
                     <User className="w-4 h-4" />
                     <span>{username}</span>
-                  </div>
+                  </button>
                   <button
                     onClick={onLogout}
                     className="flex items-center space-x-2 w-full px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-all duration-200"
