@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api import auth
+from app.api import auth,match
 from app.db.database import Base, engine
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import new_problems
@@ -18,6 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(auth.router, prefix="/api")
+app.include_router(match.router, prefix="/api/match", tags=["match"])
 app.include_router(new_problems.router, prefix="/api/problems", tags=["problems"])
 @app.get("/")
 def begin():
