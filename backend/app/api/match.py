@@ -52,45 +52,69 @@ def get_random_approved_problem(db: Session) -> Problem:
 @router.post("/join/{user_id}")
 async def join_matchmaking_queue(user_id: int, db: Session = Depends(get_db)):
     """
-    Adds a user to the matchmaking queue and attempts to create a match.
+    Adds a user to the matchmaking queue and attempts to create a match atomically.
     """
     try:
-        # 1. Add user to the left of the list (acting as a queue)
+        # Add the user to the queue and set their initial status
         redis_client.lpush(MATCHMAKING_QUEUE_KEY, user_id)
-        
-        # 2. Set the user's status to 'waiting' in a separate key
         redis_client.set(f"{USER_STATUS_KEY_PREFIX}{user_id}", json.dumps({"status": "waiting"}))
 
-        # 3. Check if there are enough players to form a match
-        if redis_client.llen(MATCHMAKING_QUEUE_KEY) >= 2:
-            # 4. Atomically pop two players from the right of the list (FIFO)
-            player2_id = int(redis_client.rpop(MATCHMAKING_QUEUE_KEY))
-            player1_id = int(redis_client.rpop(MATCHMAKING_QUEUE_KEY))
+        # Use a transaction to prevent race conditions when creating a match
+        with redis_client.pipeline() as pipe:
+            try:
+                # Watch the queue key for changes from other processes
+                pipe.watch(MATCHMAKING_QUEUE_KEY)
+                
+                # Check if there are enough players
+                queue_length = pipe.llen(MATCHMAKING_QUEUE_KEY)
+                if queue_length < 2:
+                    pipe.unwatch()
+                    return {"status": "waiting_in_queue"}
 
-            # 5. Create a new match
-            match_id = str(uuid.uuid4())
-            problem = get_random_approved_problem(db)
+                # If we have enough players, start the atomic transaction
+                pipe.multi()
+                pipe.rpop(MATCHMAKING_QUEUE_KEY) # Player 1
+                pipe.rpop(MATCHMAKING_QUEUE_KEY) # Player 2
+                
+                # Execute the transaction
+                result = pipe.execute()
+                
+                # If result is empty, it means the queue was modified by another
+                # process after we watched it (a WatchError occurred).
+                if not result:
+                    return {"status": "waiting_in_queue"}
 
-            match_details = {
-                "match_id": match_id,
-                "player1_id": player1_id,
-                "player2_id": player2_id,
-                "problem_id": problem.id,
-                "status": "active"
-            }
-            
-            # 6. Store the match details in a Redis Hash for quick lookup
-            redis_client.set(f"{MATCH_DETAILS_KEY_PREFIX}{match_id}", json.dumps(match_details))
+                # The pop operations return bytes, so decode them
+                player1_id = int(result[0])
+                player2_id = int(result[1])
 
-            # 7. Update the status for both matched players
-            player1_status = {"status": "matched", "match_id": match_id}
-            player2_status = {"status": "matched", "match_id": match_id}
-            redis_client.set(f"{USER_STATUS_KEY_PREFIX}{player1_id}", json.dumps(player1_status))
-            redis_client.set(f"{USER_STATUS_KEY_PREFIX}{player2_id}", json.dumps(player2_status))
-            
-            return {"status": "match_created", "match_id": match_id}
+                # 5. Create a new match
+                match_id = str(uuid.uuid4())
+                problem = get_random_approved_problem(db)
 
-        return {"status": "waiting_in_queue"}
+                match_details = {
+                    "match_id": match_id,
+                    "player1_id": player1_id,
+                    "player2_id": player2_id,
+                    "problem_id": problem.id,
+                    "status": "active"
+                }
+                
+                # 6. Store match details
+                redis_client.set(f"{MATCH_DETAILS_KEY_PREFIX}{match_id}", json.dumps(match_details))
+
+                # 7. Update status for both matched players
+                player1_status = {"status": "matched", "match_id": match_id}
+                player2_status = {"status": "matched", "match_id": match_id}
+                redis_client.set(f"{USER_STATUS_KEY_PREFIX}{player1_id}", json.dumps(player1_status))
+                redis_client.set(f"{USER_STATUS_KEY_PREFIX}{player2_id}", json.dumps(player2_status))
+                
+                return {"status": "match_created", "match_id": match_id}
+
+            except redis.exceptions.WatchError:
+                # This is expected if the queue is busy. The user simply remains in the queue
+                # and their next poll will reflect the status.
+                return {"status": "waiting_in_queue"}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred during matchmaking: {str(e)}")

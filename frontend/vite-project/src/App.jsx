@@ -144,7 +144,7 @@ const App = () => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      axios.get('http://localhost:8000/api/v1/profile', {
+      axios.get('http://localhost:8000/api/profile', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       .then(response => {

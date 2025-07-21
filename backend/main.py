@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api import auth,match
+from app.api import auth,match,user
 from app.db.database import Base, engine
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import new_problems
@@ -20,6 +20,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api")
 app.include_router(match.router, prefix="/api/match", tags=["match"])
 app.include_router(new_problems.router, prefix="/api/problems", tags=["problems"])
+app.include_router(user.router, prefix = "/api", tags=["Users"])
 @app.get("/")
 def begin():
     return {"Welcome to coderiot"}

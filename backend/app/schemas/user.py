@@ -28,3 +28,11 @@ class UserOut(BaseModel):
     class Config:
         orm_mode = True # Enable ORM mode for SQLAlchemy compatibility
 
+# specifically for matchamaking purpose:
+class UserPublicOut(BaseModel):
+    id: int
+    username: str
+
+    class Config:
+        orm_mode = True
+

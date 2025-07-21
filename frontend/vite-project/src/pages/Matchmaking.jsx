@@ -173,11 +173,19 @@ const Matchmaking = ({ userId, username, onToast, setActiveTab }) => {
                         <p className="text-gray-300 font-tech mb-12">Challenge a random developer and prove your skills.</p>
                         <button
                             onClick={handleJoinQueue}
-                            className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-tech text-2xl rounded-xl px-12 py-6 hover:scale-105 transition-all duration-200 shadow-lg animate-glow"
+                            // Disable the button if userId is null or undefined
+                            disabled={!userId}
+                            className={`
+                                bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-tech text-2xl 
+                                rounded-xl px-12 py-6 transition-all duration-200 shadow-lg
+                                ${!userId 
+                                    ? 'opacity-50 cursor-not-allowed' 
+                                    : 'hover:scale-105 animate-glow'}
+                            `}
                         >
                             <div className="flex items-center justify-center">
                                 <Users className="w-8 h-8 mr-4" />
-                                Find Match
+                                {userId ? 'Find Match' : 'Connecting...'}
                             </div>
                         </button>
                     </div>
