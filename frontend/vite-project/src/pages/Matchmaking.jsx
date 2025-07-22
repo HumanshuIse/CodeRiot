@@ -15,7 +15,7 @@ const PlayerCard = ({ username, isOpponent = false }) => (
 );
 
 // The main matchmaking component
-const Matchmaking = ({ userId, username, onToast, setActiveTab }) => {
+const Matchmaking = ({ userId, username, onToast,onMatchFound, setActiveTab }) => {
     const [status, setStatus] = useState('idle'); // idle, searching, matched, error
     const [matchDetails, setMatchDetails] = useState(null);
     const [opponentUsername, setOpponentUsername] = useState('Opponent');
@@ -79,7 +79,7 @@ const Matchmaking = ({ userId, username, onToast, setActiveTab }) => {
         if (status === 'matched' && countdown > 0) {
             timerId = setTimeout(() => setCountdown(countdown - 1), 1000);
         } else if (status === 'matched' && countdown === 0) {
-            setActiveTab('editor');
+            onMatchFound(matchDetails);
         }
         return () => clearTimeout(timerId);
     }, [status, countdown, setActiveTab]);

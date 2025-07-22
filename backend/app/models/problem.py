@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, ARRA
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.database import Base
+from sqlalchemy.dialects.postgresql import JSONB
 
 class Problem(Base):
     __tablename__ = "problems"
@@ -19,3 +20,4 @@ class Problem(Base):
 
     contributor = relationship("User", foreign_keys=[contributor_id], backref="submitted_problems")
     # reviewer relationship removed
+    test_cases = Column(JSONB, nullable=True)
