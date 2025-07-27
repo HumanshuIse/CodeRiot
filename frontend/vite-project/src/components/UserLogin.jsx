@@ -2,13 +2,13 @@
 import React, { useState } from 'react';
 import { User, Lock, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
-// The prop from App.jsx is named `onLoginSuccess` in the new App.jsx,
-// so we'll update it here to match.
 const UserLogin = ({ onToast, onLoginSuccess }) => {
   const [form, setForm] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -24,16 +24,13 @@ const UserLogin = ({ onToast, onLoginSuccess }) => {
 
     setIsLoading(true);
     try {
-      // The API endpoint for login should be under the /auth prefix
       const response = await axios.post('http://localhost:8000/api/auth/login', {
         username: form.username,
         password: form.password
       });
 
       if (response.status === 200 && response.data.access_token) {
-        // ✅ CHANGED: Pass only the access_token to the parent component's handler.
-        // The parent (App.jsx) will now handle fetching the profile.
-        onLoginSuccess(response.data.access_token);
+        onLoginSuccess(response.data.access_token, navigate); // Pass navigate to onLoginSuccess
       }
     } catch (error) {
       console.error('Login failed:', error);

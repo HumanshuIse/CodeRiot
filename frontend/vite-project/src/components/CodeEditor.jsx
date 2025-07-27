@@ -4,7 +4,8 @@ import axios from 'axios';
 import { Play, Settings, Copy, Download, RefreshCw, FileText, Bug, UploadCloud, Loader } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 
-// ✅ Accept problem and match data as props
+// CodeEditor doesn't need useNavigate directly as it's a content component.
+// Navigation logic for 'problem not found' or 'not logged in' is handled in App.jsx.
 const CodeEditor = ({ problem, match }) => {
   const [code, setCode] = useState('');
   const [language, setLanguage] = useState('python'); // Default to a common competitive language
@@ -14,7 +15,7 @@ const CodeEditor = ({ problem, match }) => {
   const [runInput, setRunInput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   
-  // ✅ State for the "Submit" functionality
+  // State for the "Submit" functionality
   const [submissionStatus, setSubmissionStatus] = useState('Idle'); // Idle, Submitting, Finished
   const [submissionResult, setSubmissionResult] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,7 +63,7 @@ const CodeEditor = ({ problem, match }) => {
     }
   };
 
-  // ✅ NEW: Function for the "Submit" button (final judging)
+  // Function for the "Submit" button (final judging)
   const handleSubmitCode = async () => {
     setIsSubmitting(true);
     setSubmissionStatus('Submitting...');

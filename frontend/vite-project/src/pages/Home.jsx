@@ -4,8 +4,9 @@ import { useState, useEffect } from "react"
 import { Code, Trophy, Sword, Timer, Target, ArrowRight, Play, Star, Github, Zap, Users, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
-export default function CodeRiotLanding() {
+export default function CodeRiotLanding({ onGetStarted }) { // onGetStarted is now a direct prop from App.jsx
   const [displayText, setDisplayText] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -80,7 +81,6 @@ export default function CodeRiotLanding() {
     { number: "24/7", label: "LIVE MATCHES" },
   ]
 
-  // Modified FloatingCodeBlock to be more flexible for symbols/text
   const FloatingCodeBlock = ({ children, style = {}, delay = 0, size = "text-xl", textColor = "text-green-400", borderColor = "border-green-500/30", bgColor = "bg-gray-800/30" }) => (
     <div
       className={`absolute ${bgColor} backdrop-blur-sm border ${borderColor} rounded-lg p-2 ${size} font-pixel ${textColor} opacity-50 animate-float`} // Opacity set to 50% for better visibility
@@ -94,17 +94,13 @@ export default function CodeRiotLanding() {
     </div>
   )
 
-  // Combined array for floating programming elements (snippets and symbols)
   const floatingElements = [
-    // Code snippets with adjusted sizes
     { text: 'QUICKSORT()', top: '10%', left: '10%', size: 'text-2xl', textColor: 'text-cyan-400', delay: 0.1 },
     { text: 'WHILE(TRUE)', top: '20%', right: '15%', size: 'text-xl', textColor: 'text-blue-400', delay: 0.7 },
     { text: 'O(LOG N)', top: '30%', left: '5%', size: 'text-3xl', textColor: 'text-purple-400', delay: 1.3 },
     { text: 'DIJKSTRA', top: '40%', right: '10%', size: 'text-2xl', textColor: 'text-green-400', delay: 1.9 },
     { text: 'BINARY TREE', top: '50%', left: '20%', size: 'text-xl', textColor: 'text-yellow-400', delay: 2.5 },
     { text: 'BFS', top: '60%', right: '25%', size: 'text-xl', textColor: 'text-red-400', delay: 3.1 },
-
-    // Programming symbols with adjusted sizes
     { text: '<>', top: '15%', right: '5%', size: 'text-4xl', textColor: 'text-cyan-300', delay: 0.3 },
     { text: '{}', top: '25%', left: '25%', size: 'text-3xl', textColor: 'text-blue-300', delay: 0.9 },
     { text: '//', top: '35%', right: '20%', size: 'text-2xl', textColor: 'text-purple-300', delay: 1.5 },
@@ -205,9 +201,6 @@ export default function CodeRiotLanding() {
         <div className="absolute inset-0 bg-[linear-gradient(rgba(0,255,255,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,255,0.1)_1px,transparent_1px)] bg-[size:40px_40px]" />
       </div>
 
-      {/* Navigation */}
-      {/* (Navigation section commented out in your provided code, keeping it that way) */}
-
       {/* Hero Section */}
       <section className="relative z-10 flex flex-col items-center justify-center min-h-[85vh] px-4 text-center">
         <div
@@ -231,6 +224,7 @@ export default function CodeRiotLanding() {
 
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
             <Button
+              onClick={onGetStarted} // Use the onGetStarted prop
               size="lg"
               className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-8 py-4 font-tech font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
             >
@@ -362,6 +356,7 @@ export default function CodeRiotLanding() {
             YOUR VICTORY AWAITS
           </p>
           <Button
+            onClick={onGetStarted} // Use the onGetStarted prop
             size="lg"
             className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-10 py-5 font-tech font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
           >

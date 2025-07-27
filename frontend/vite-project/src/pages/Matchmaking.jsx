@@ -1,7 +1,8 @@
 // src/pages/Matchmaking.jsx
-import React, { useState, useEffect, useCallback, useRef } from 'react'; // ✅ Import useRef
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { Users, Swords, XCircle, Loader, Shield, Zap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 // PlayerCard component remains the same...
 const PlayerCard = ({ username, isOpponent = false }) => (
@@ -15,14 +16,14 @@ const PlayerCard = ({ username, isOpponent = false }) => (
 );
 
 
-const Matchmaking = ({ userId, username, onToast, onMatchFound, setActiveTab }) => {
+const Matchmaking = ({ userId, username, onToast, onMatchFound }) => { // Removed setActiveTab
     const [status, setStatus] = useState('idle'); // idle, searching, matched, error
     const [matchDetails, setMatchDetails] = useState(null);
     const [opponentUsername, setOpponentUsername] = useState('Opponent');
     const [countdown, setCountdown] = useState(5);
     
-    // ✅ Use useRef to hold the WebSocket instance. This will not cause re-renders.
     const socketRef = useRef(null);
+    const navigate = useNavigate(); // Initialize useNavigate
 
     const fetchOpponentUsername = useCallback(async (opponentId) => {
         try {
@@ -36,12 +37,10 @@ const Matchmaking = ({ userId, username, onToast, onMatchFound, setActiveTab }) 
         }
     }, []);
 
-    // ✅ This single useEffect now manages the entire WebSocket lifecycle
     useEffect(() => {
-        // Only run this effect if we are supposed to be searching
         if (status === 'searching' && !socketRef.current) {
             const newSocket = new WebSocket(`ws://localhost:8000/api/match/ws/matchmaking/${userId}`);
-            socketRef.current = newSocket; // Store the socket in the ref
+            socketRef.current = newSocket;
 
             newSocket.onopen = () => {
                 console.log("WebSocket connection established.");
@@ -51,7 +50,6 @@ const Matchmaking = ({ userId, username, onToast, onMatchFound, setActiveTab }) 
             newSocket.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 
-                // You can safely call setStatus here now, as it won't trigger this effect's cleanup
                 if (data.status === 'waiting') {
                     setStatus('searching');
                 } else if (data.status === 'matched') {
@@ -60,7 +58,7 @@ const Matchmaking = ({ userId, username, onToast, onMatchFound, setActiveTab }) 
                         fetchOpponentUsername(data.opponent_id);
                     }
                     setStatus('matched');
-                    newSocket.close(); // We are done with the socket once a match is found
+                    newSocket.close();
                 } else if (data.status === 'error') {
                     onToast(data.detail || 'A matchmaking error occurred.', 'error');
                     setStatus('error');
@@ -70,7 +68,7 @@ const Matchmaking = ({ userId, username, onToast, onMatchFound, setActiveTab }) 
 
             newSocket.onclose = () => {
                 console.log("WebSocket connection closed.");
-                socketRef.current = null; // Clear the ref on close
+                socketRef.current = null;
             };
 
             newSocket.onerror = (err) => {
@@ -81,27 +79,24 @@ const Matchmaking = ({ userId, username, onToast, onMatchFound, setActiveTab }) 
             };
         }
 
-        // Cleanup function: this runs when the component unmounts
         return () => {
             if (socketRef.current) {
                 socketRef.current.close();
                 socketRef.current = null;
             }
         };
-    }, [status, userId, onToast, fetchOpponentUsername]); // Effect depends on status
+    }, [status, userId, onToast, fetchOpponentUsername]);
 
-    // This effect for the countdown remains the same and is correct.
     useEffect(() => {
         let timerId;
         if (status === 'matched' && countdown > 0) {
             timerId = setTimeout(() => setCountdown(countdown - 1), 1000);
         } else if (status === 'matched' && countdown === 0) {
-            onMatchFound(matchDetails);
+            onMatchFound(matchDetails, navigate); // Pass navigate to onMatchFound
         }
         return () => clearTimeout(timerId);
-    }, [status, countdown, matchDetails, onMatchFound]);
+    }, [status, countdown, matchDetails, onMatchFound, navigate]);
 
-    // ✅ Simplified: just change the status to 'searching' to trigger the effect
     const handleJoinQueue = () => {
         if (!userId) {
             onToast('Still connecting to user session.', 'error');
@@ -110,7 +105,6 @@ const Matchmaking = ({ userId, username, onToast, onMatchFound, setActiveTab }) 
         setStatus('searching');
     };
 
-    // ✅ Simplified: close the socket via the ref and change status
     const handleLeaveQueue = () => {
         if (socketRef.current) {
             socketRef.current.close();
@@ -120,7 +114,6 @@ const Matchmaking = ({ userId, username, onToast, onMatchFound, setActiveTab }) 
     };
     
     const renderContent = () => {
-        // No changes needed in the JSX, it will react to the 'status' state
         switch (status) {
             case 'matched':
                 return (

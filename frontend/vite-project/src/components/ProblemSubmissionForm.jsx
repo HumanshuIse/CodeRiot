@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 const ProblemSubmissionForm = ({ onToast }) => {
   const [formData, setFormData] = useState({
@@ -18,6 +19,7 @@ const ProblemSubmissionForm = ({ onToast }) => {
     constraints: '',
   });
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const buttonClassName = "bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-6 py-3 font-tech font-semibold text-base rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105";
   const inputClassName = "flex h-10 w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 font-tech";
@@ -41,17 +43,17 @@ const ProblemSubmissionForm = ({ onToast }) => {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' || e.key === ',') { // Add tag on Enter or Comma
-      e.preventDefault(); // Prevent form submission
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
       const newTag = formData.tagInput.trim();
       if (newTag && !formData.tags.includes(newTag)) {
         setFormData((prevData) => ({
           ...prevData,
           tags: [...prevData.tags, newTag],
-          tagInput: '', // Clear input after adding
+          tagInput: '',
         }));
       }
-    } else if (e.key === 'Backspace' && formData.tagInput === '') { // Remove last tag on Backspace if input is empty
+    } else if (e.key === 'Backspace' && formData.tagInput === '') {
       setFormData((prevData) => ({
         ...prevData,
         tags: prevData.tags.slice(0, prevData.tags.length - 1),
@@ -74,16 +76,17 @@ const ProblemSubmissionForm = ({ onToast }) => {
       if (!token) {
         onToast("You must be logged in to submit a problem.", "error");
         setIsLoading(false);
+        navigate('/auth'); // Redirect to auth if not logged in
         return;
       }
 
       const response = await axios.post(
-        'http://localhost:8000/api/problems/submit-problem', // Corrected API endpoint for v1 prefix
+        'http://localhost:8000/api/problems/submit-problem',
         {
           title: formData.title,
           description: formData.description,
           difficulty: formData.difficulty,
-          tags: formData.tags, // Send as array
+          tags: formData.tags,
           constraints: formData.constraints,
         },
         {
@@ -96,7 +99,7 @@ const ProblemSubmissionForm = ({ onToast }) => {
 
       if (response.status === 200) {
         onToast('Problem submitted successfully for review!', 'success');
-        setFormData({ // Reset form
+        setFormData({
           title: '',
           description: '',
           difficulty: 'Easy',
@@ -104,6 +107,7 @@ const ProblemSubmissionForm = ({ onToast }) => {
           tagInput: '',
           constraints: '',
         });
+        navigate('/profile'); // Optionally navigate back to profile or a confirmation page
       }
     } catch (error) {
       console.error('Problem submission error:', error);
@@ -199,7 +203,7 @@ const ProblemSubmissionForm = ({ onToast }) => {
                 value={formData.tagInput}
                 onChange={handleTagInputChange}
                 onKeyDown={handleKeyDown}
-                className="!h-auto !w-auto flex-grow bg-transparent border-none focus-visible:ring-0 focus-visible:outline-none" // Override for flex-grow behavior
+                className="!h-auto !w-auto flex-grow bg-transparent border-none focus-visible:ring-0 focus-visible:outline-none"
                 placeholder={formData.tags.length === 0 ? "Add tags (e.g., array, dp)" : ""}
               />
             </div>

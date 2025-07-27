@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
-// Update prop name to onLoginSuccess
 const UserRegister = ({ onToast, onLoginSuccess }) => {
   const [form, setForm] = useState({
     username: '',
@@ -14,6 +14,7 @@ const UserRegister = ({ onToast, onLoginSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -41,9 +42,7 @@ const UserRegister = ({ onToast, onLoginSuccess }) => {
       });
       
       if (response.status === 200 && response.data.access_token) {
-        // ✅ CHANGED: Just like in login, pass only the access_token
-        // to the parent App.jsx component's handler.
-        onLoginSuccess(response.data.access_token);
+        onLoginSuccess(response.data.access_token, navigate); // Pass navigate to onLoginSuccess
       }
     } catch (error) {
       console.error('Registration failed:', error);

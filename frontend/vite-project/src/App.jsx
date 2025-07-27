@@ -1,6 +1,7 @@
 // src/App.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'; // Import router components and hook
 
 // Import Components
 import Navbar from './components/Navbar';
@@ -15,8 +16,8 @@ import Home from './pages/Home';
 import UserProfile from './pages/UserProfile';
 import Matchmaking from './pages/Matchmaking';
 
+// Main App component wrapped with BrowserRouter for routing
 const App = () => {
-  const [activeTab, setActiveTab] = useState('home');
   const [authTab, setAuthTab] = useState('login');
   const [toastInfo, setToastInfo] = useState(null);
   
@@ -26,11 +27,10 @@ const App = () => {
 
   const [currentMatch, setCurrentMatch] = useState(null);
 
-  // ✅ THE FIX IS HERE: Wrap prop functions in useCallback
-  // This ensures they are stable and don't trigger unnecessary useEffect runs in child components.
+  // useCallback for stable prop functions to prevent unnecessary re-renders in children
   const showToast = useCallback((message, type) => {
     setToastInfo({ message, type });
-  }, []); // Empty dependency array means this function is created only once.
+  }, []);
 
   const hideToast = () => {
     setToastInfo(null);
@@ -54,40 +54,36 @@ const App = () => {
       showToast("Your session expired. Please log in again.", "error");
       throw error;
     }
-  }, [showToast]); // showToast is a dependency now
+  }, [showToast]);
 
-  const handleLogin = useCallback(async (token) => {
+  // handleLogin now receives navigate from the component where it's called
+  const handleLogin = useCallback(async (token, navigate) => { // Added navigate as a parameter
     localStorage.setItem('token', token);
     try {
       await fetchUserProfile(token);
-      setActiveTab('user-profile');
+      navigate('/profile'); // Use navigate to go to profile page
       showToast('Login successful!', 'success');
     } catch (error) {
       // Error is handled in fetchUserProfile
     }
   }, [fetchUserProfile, showToast]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback((navigate) => { // Added navigate as a parameter
     setIsLoggedIn(false);
     setUsername('');
     setUserId(null);
     setCurrentMatch(null);
     localStorage.removeItem('token');
-    setActiveTab('home');
+    navigate('/'); // Use navigate to go to home page
     showToast('Logged out successfully', 'success');
-  };
+  }, [showToast]);
 
-  // ✅ ALSO WRAP THIS HANDLER IN useCallback
-  const handleMatchFound = useCallback((matchData) => {
+  const handleMatchFound = useCallback((matchData, navigate) => { // Added navigate as a parameter
     setCurrentMatch(matchData);
-    setActiveTab('editor');
-  }, []); // This function is also stable now.
+    navigate('/editor'); // Use navigate to go to editor page
+  }, []);
   
-  const handleGetStarted = () => {
-    setActiveTab('auth');
-    setAuthTab('login');
-  };
-
+  // Effect to check for existing token on app load
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -95,55 +91,48 @@ const App = () => {
     }
   }, [fetchUserProfile]);
 
+  return (
+    <BrowserRouter>
+      <AppContent
+        toastInfo={toastInfo}
+        hideToast={hideToast}
+        isLoggedIn={isLoggedIn}
+        username={username}
+        handleLogout={handleLogout}
+        handleLogin={handleLogin}
+        userId={userId}
+        currentMatch={currentMatch}
+        handleMatchFound={handleMatchFound}
+        authTab={authTab}
+        setAuthTab={setAuthTab}
+        showToast={showToast}
+      />
+    </BrowserRouter>
+  );
+};
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'home':
-        return <Home onGetStarted={handleGetStarted} setActiveTab={setActiveTab} />;
-      
-      case 'editor':
-        if (!isLoggedIn) {
-          showToast("Please log in to use the editor.", "error");
-          setActiveTab('auth');
-          return null;
-        }
-        return <CodeEditor problem={currentMatch?.problem} match={currentMatch} />;
+// A wrapper component to use useNavigate within the BrowserRouter context
+const AppContent = ({
+  toastInfo,
+  hideToast,
+  isLoggedIn,
+  username,
+  handleLogout,
+  handleLogin,
+  userId,
+  currentMatch,
+  handleMatchFound,
+  authTab,
+  setAuthTab,
+  showToast, // Destructure showToast here
+}) => {
+  const navigate = useNavigate(); // Initialize useNavigate
 
-      case 'matchmaking':
-        if (!isLoggedIn) {
-          showToast("Please log in to find a match.", "error");
-          setActiveTab('auth');
-          return null;
-        }
-        return <Matchmaking userId={userId} username={username} onToast={showToast} onMatchFound={handleMatchFound} setActiveTab={setActiveTab} />;
-
-      // ... other cases ...
-      
-      case 'auth':
-        return (
-          <div className="min-h-screen bg-black flex items-center justify-center py-8">
-            <div className="w-full max-w-md px-4">
-              <div className="text-center mb-8">
-                <h1 className="text-4xl font-pixel text-white">CodeRiot</h1>
-              </div>
-              <div className="bg-gray-900/70 backdrop-blur-sm rounded-lg shadow-xl border border-gray-700 pixel-border">
-                <div className="flex border-b border-gray-700">
-                  <button onClick={() => setAuthTab('login')} className={`flex-1 py-4 font-tech ${ authTab === 'login' ? 'bg-gray-800 text-white' : 'text-gray-400' }`}>Login</button>
-                  <button onClick={() => setAuthTab('register')} className={`flex-1 py-4 font-tech ${ authTab === 'register' ? 'bg-gray-800 text-white' : 'text-gray-400' }`}>Register</button>
-                </div>
-                <div className="p-8">
-                  {authTab === 'login' && <UserLogin onToast={showToast} onLoginSuccess={handleLogin} />}
-                  {authTab === 'register' && <UserRegister onToast={showToast} onLoginSuccess={handleLogin} />}
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      
-      default:
-        return <Home onGetStarted={handleGetStarted} setActiveTab={setActiveTab} />;
-    }
-  };
+  // Function to handle "Get Started" button click on Home page
+  const handleGetStarted = useCallback(() => {
+    navigate('/auth'); // Navigate to the auth route
+    setAuthTab('login'); // Set default tab to login
+  }, [navigate, setAuthTab]);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -152,16 +141,77 @@ const App = () => {
           <Toast message={toastInfo.message} type={toastInfo.type} onClose={hideToast} />
         </div>
       )}
-      <Navbar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab}
+      <Navbar
         isLoggedIn={isLoggedIn}
         username={username}
-        onLogout={handleLogout}
+        onLogout={() => handleLogout(navigate)} // Pass navigate to handleLogout
       />
-      {renderContent()}
+      <Routes>
+        <Route path="/" element={<Home onGetStarted={handleGetStarted} />} />
+        <Route path="/editor" element={
+          isLoggedIn ? (
+            <CodeEditor problem={currentMatch?.problem} match={currentMatch} />
+          ) : (
+            // Redirect to auth if not logged in
+            <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
+          )
+        } />
+        <Route path="/matchmaking" element={
+          isLoggedIn ? (
+            <Matchmaking userId={userId} username={username} onToast={showToast} onMatchFound={(matchData) => handleMatchFound(matchData, navigate)} />
+          ) : (
+            // Redirect to auth if not logged in
+            <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
+          )
+        } />
+        <Route path="/leaderboard" element={
+          <div className="min-h-screen flex items-center justify-center text-white font-pixel text-2xl">
+            Leaderboard Coming Soon!
+          </div>
+        } />
+        <Route path="/profile" element={
+          isLoggedIn ? (
+            <UserProfile onToast={showToast} navigate={navigate} /> // Pass navigate instead of setActiveTab
+          ) : (
+            // Redirect to auth if not logged in
+            <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
+          )
+        } />
+        <Route path="/submit-problem" element={
+          isLoggedIn ? (
+            <ProblemSubmissionForm onToast={showToast} />
+          ) : (
+            // Redirect to auth if not logged in
+            <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
+          )
+        } />
+        <Route path="/auth" element={
+          <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
+        } />
+      </Routes>
     </div>
   );
 };
+
+// Reusable AuthPage component
+const AuthPage = ({ authTab, setAuthTab, onLoginSuccess, showToast }) => (
+  <div className="min-h-screen bg-black flex items-center justify-center py-8">
+    <div className="w-full max-w-md px-4">
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-pixel text-white">CodeRiot</h1>
+      </div>
+      <div className="bg-gray-900/70 backdrop-blur-sm rounded-lg shadow-xl border border-gray-700 pixel-border">
+        <div className="flex border-b border-gray-700">
+          <button onClick={() => setAuthTab('login')} className={`flex-1 py-4 font-tech ${ authTab === 'login' ? 'bg-gray-800 text-white' : 'text-gray-400' }`}>Login</button>
+          <button onClick={() => setAuthTab('register')} className={`flex-1 py-4 font-tech ${ authTab === 'register' ? 'bg-gray-800 text-white' : 'text-gray-400' }`}>Register</button>
+        </div>
+        <div className="p-8">
+          {authTab === 'login' && <UserLogin onToast={showToast} onLoginSuccess={onLoginSuccess} />}
+          {authTab === 'register' && <UserRegister onToast={showToast} onLoginSuccess={onLoginSuccess} />}
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 export default App;
