@@ -1,5 +1,5 @@
 
-from pydantic import BaseModel
+from pydantic import BaseModel,ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -20,4 +20,4 @@ class SubmissionOut(BaseModel):
     submitted_at: datetime
 
     class Config:
-        orm_mode = True
+         from_attributes = True

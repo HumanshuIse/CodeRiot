@@ -1,5 +1,5 @@
 # app/schemas/user.py
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr,ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -26,7 +26,7 @@ class UserOut(BaseModel):
     problems_contributed_count: int # Count of problems contributed by this user
 
     class Config:
-        orm_mode = True # Enable ORM mode for SQLAlchemy compatibility
+        from_attributes = True # Enable ORM mode for SQLAlchemy compatibility
 
 # specifically for matchamaking purpose:
 class UserPublicOut(BaseModel):
@@ -34,5 +34,4 @@ class UserPublicOut(BaseModel):
     username: str
 
     class Config:
-        orm_mode = True
-
+         from_attributes = True

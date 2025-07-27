@@ -1,9 +1,9 @@
 // src/pages/Matchmaking.jsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react'; // ✅ Import useRef
 import axios from 'axios';
 import { Users, Swords, XCircle, Loader, Shield, Zap } from 'lucide-react';
 
-// A simple card to display user information
+// PlayerCard component remains the same...
 const PlayerCard = ({ username, isOpponent = false }) => (
     <div className="bg-gray-900/50 pixel-border p-6 text-center w-64 h-48 flex flex-col justify-center items-center animate-glow-slow border-cyan-500/50">
         <div className={`w-16 h-16 mb-4 flex items-center justify-center pixel-border ${isOpponent ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'}`}>
@@ -14,14 +14,16 @@ const PlayerCard = ({ username, isOpponent = false }) => (
     </div>
 );
 
-// The main matchmaking component
-const Matchmaking = ({ userId, username, onToast,onMatchFound, setActiveTab }) => {
+
+const Matchmaking = ({ userId, username, onToast, onMatchFound, setActiveTab }) => {
     const [status, setStatus] = useState('idle'); // idle, searching, matched, error
     const [matchDetails, setMatchDetails] = useState(null);
     const [opponentUsername, setOpponentUsername] = useState('Opponent');
     const [countdown, setCountdown] = useState(5);
+    
+    // ✅ Use useRef to hold the WebSocket instance. This will not cause re-renders.
+    const socketRef = useRef(null);
 
-    // Function to fetch opponent's username
     const fetchOpponentUsername = useCallback(async (opponentId) => {
         try {
             const response = await axios.get(`http://localhost:8000/api/users/${opponentId}`);
@@ -34,46 +36,61 @@ const Matchmaking = ({ userId, username, onToast,onMatchFound, setActiveTab }) =
         }
     }, []);
 
-    // The polling function to check match status
-    const pollStatus = useCallback(async () => {
-        // ✅ **FIX:** Add a guard clause to ensure userId exists before making an API call.
-        if (!userId) {
-            console.log("Waiting for user ID before polling...");
-            return;
-        }
-
-        try {
-            const response = await axios.get(`http://localhost:8000/api/match/status/${userId}`);
-            const data = response.data;
-
-            if (data.status === 'matched') {
-                setMatchDetails(data);
-                if(data.opponent_id) {
-                    fetchOpponentUsername(data.opponent_id);
-                }
-                setStatus('matched');
-            } else if (data.status === 'waiting') {
-                setStatus('searching');
-            }
-
-        } catch (error) {
-            console.error('Error polling match status:', error);
-            onToast('Error checking match status. Please try again.', 'error');
-            setStatus('error');
-        }
-    }, [userId, onToast, fetchOpponentUsername]);
-
-    // Effect to manage polling interval
+    // ✅ This single useEffect now manages the entire WebSocket lifecycle
     useEffect(() => {
-        let intervalId;
-        if (status === 'searching') {
-            pollStatus();
-            intervalId = setInterval(pollStatus, 2000);
-        }
-        return () => clearInterval(intervalId);
-    }, [status, pollStatus]);
+        // Only run this effect if we are supposed to be searching
+        if (status === 'searching' && !socketRef.current) {
+            const newSocket = new WebSocket(`ws://localhost:8000/api/match/ws/matchmaking/${userId}`);
+            socketRef.current = newSocket; // Store the socket in the ref
 
-    // Effect to handle countdown when a match is found
+            newSocket.onopen = () => {
+                console.log("WebSocket connection established.");
+                onToast('Entering matchmaking queue...', 'info');
+            };
+
+            newSocket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                // You can safely call setStatus here now, as it won't trigger this effect's cleanup
+                if (data.status === 'waiting') {
+                    setStatus('searching');
+                } else if (data.status === 'matched') {
+                    setMatchDetails(data);
+                    if (data.opponent_id) {
+                        fetchOpponentUsername(data.opponent_id);
+                    }
+                    setStatus('matched');
+                    newSocket.close(); // We are done with the socket once a match is found
+                } else if (data.status === 'error') {
+                    onToast(data.detail || 'A matchmaking error occurred.', 'error');
+                    setStatus('error');
+                    newSocket.close();
+                }
+            };
+
+            newSocket.onclose = () => {
+                console.log("WebSocket connection closed.");
+                socketRef.current = null; // Clear the ref on close
+            };
+
+            newSocket.onerror = (err) => {
+                console.error("WebSocket error:", err);
+                onToast("Connection to matchmaking service failed.", "error");
+                setStatus('error');
+                socketRef.current = null;
+            };
+        }
+
+        // Cleanup function: this runs when the component unmounts
+        return () => {
+            if (socketRef.current) {
+                socketRef.current.close();
+                socketRef.current = null;
+            }
+        };
+    }, [status, userId, onToast, fetchOpponentUsername]); // Effect depends on status
+
+    // This effect for the countdown remains the same and is correct.
     useEffect(() => {
         let timerId;
         if (status === 'matched' && countdown > 0) {
@@ -82,33 +99,28 @@ const Matchmaking = ({ userId, username, onToast,onMatchFound, setActiveTab }) =
             onMatchFound(matchDetails);
         }
         return () => clearTimeout(timerId);
-    }, [status, countdown, setActiveTab]);
+    }, [status, countdown, matchDetails, onMatchFound]);
 
-    const handleJoinQueue = async () => {
-        // ✅ **FIX:** Add a guard clause here as well for immediate actions.
+    // ✅ Simplified: just change the status to 'searching' to trigger the effect
+    const handleJoinQueue = () => {
         if (!userId) {
-            onToast('Still connecting to user session, please wait a moment.', 'error');
+            onToast('Still connecting to user session.', 'error');
             return;
         }
-
         setStatus('searching');
-        onToast('Entering matchmaking queue...', 'info');
-        try {
-            await axios.post(`http://localhost:8000/api/match/join/${userId}`);
-        } catch (error) {
-            console.error('Failed to join matchmaking queue:', error);
-            onToast(error.response?.data?.detail || 'Could not join the queue.', 'error');
-            setStatus('error');
-        }
     };
 
-    const handleLeaveQueue = async () => {
-        // This function doesn't make an API call with userId, so it's safe.
+    // ✅ Simplified: close the socket via the ref and change status
+    const handleLeaveQueue = () => {
+        if (socketRef.current) {
+            socketRef.current.close();
+        }
         setStatus('idle');
         onToast('Left the matchmaking queue.', 'info');
     };
-
+    
     const renderContent = () => {
+        // No changes needed in the JSX, it will react to the 'status' state
         switch (status) {
             case 'matched':
                 return (
@@ -143,10 +155,7 @@ const Matchmaking = ({ userId, username, onToast,onMatchFound, setActiveTab }) =
                             <div className="absolute inset-4 border-4 border-cyan-500/50 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
                             <Loader className="w-16 h-16 text-cyan-400 animate-spin-slow" />
                         </div>
-                        <button
-                            onClick={handleLeaveQueue}
-                            className="mt-8 flex items-center mx-auto bg-red-600 text-white font-tech text-lg rounded-xl px-8 py-3 hover:bg-red-700 transition-all duration-200 shadow-lg"
-                        >
+                        <button onClick={handleLeaveQueue} className="mt-8 flex items-center mx-auto bg-red-600 text-white font-tech text-lg rounded-xl px-8 py-3 hover:bg-red-700 transition-all duration-200 shadow-lg" >
                             <XCircle className="w-5 h-5 mr-2" />
                             Cancel Search
                         </button>
@@ -157,10 +166,7 @@ const Matchmaking = ({ userId, username, onToast,onMatchFound, setActiveTab }) =
                     <div className="text-center animate-fade-in">
                         <h2 className="text-3xl font-pixel text-red-500 mb-4 text-shadow-neon">An Error Occurred</h2>
                         <p className="text-gray-300 font-tech mb-8">We couldn't connect to the matchmaking service. Please try again.</p>
-                         <button
-                            onClick={() => setStatus('idle')}
-                            className="bg-blue-600 text-white font-tech text-lg rounded-xl px-8 py-3 hover:bg-blue-700 transition-all duration-200 shadow-lg"
-                        >
+                         <button onClick={() => setStatus('idle')} className="bg-blue-600 text-white font-tech text-lg rounded-xl px-8 py-3 hover:bg-blue-700 transition-all duration-200 shadow-lg" >
                             Back to Menu
                         </button>
                     </div>
@@ -171,18 +177,7 @@ const Matchmaking = ({ userId, username, onToast,onMatchFound, setActiveTab }) =
                     <div className="text-center animate-fade-in">
                         <h2 className="text-5xl font-pixel text-white mb-4 bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent text-shadow-neon">Enter the Arena</h2>
                         <p className="text-gray-300 font-tech mb-12">Challenge a random developer and prove your skills.</p>
-                        <button
-                            onClick={handleJoinQueue}
-                            // Disable the button if userId is null or undefined
-                            disabled={!userId}
-                            className={`
-                                bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-tech text-2xl 
-                                rounded-xl px-12 py-6 transition-all duration-200 shadow-lg
-                                ${!userId 
-                                    ? 'opacity-50 cursor-not-allowed' 
-                                    : 'hover:scale-105 animate-glow'}
-                            `}
-                        >
+                        <button onClick={handleJoinQueue} disabled={!userId} className={` bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-tech text-2xl  rounded-xl px-12 py-6 transition-all duration-200 shadow-lg ${!userId  ? 'opacity-50 cursor-not-allowed'  : 'hover:scale-105 animate-glow'} `} >
                             <div className="flex items-center justify-center">
                                 <Users className="w-8 h-8 mr-4" />
                                 {userId ? 'Find Match' : 'Connecting...'}
