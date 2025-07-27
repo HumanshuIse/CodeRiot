@@ -24,7 +24,7 @@ const UserProfile = ({ onToast, setActiveTab }) => {
           return;
         }
 
-        const response = await axios.get('http://localhost:8000/api/profile', {
+        const response = await axios.get('http://localhost:8000/api/auth/profile', {
           headers: {
             'Authorization': `Bearer ${token}`
           }

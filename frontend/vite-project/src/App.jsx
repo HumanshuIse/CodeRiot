@@ -38,7 +38,7 @@ const App = () => {
 
   const fetchUserProfile = useCallback(async (token) => {
     try {
-      const response = await axios.get('http://localhost:8000/api/profile', {
+      const response = await axios.get('http://localhost:8000/api/auth/profile', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setIsLoggedIn(true);

@@ -25,7 +25,7 @@ const UserLogin = ({ onToast, onLoginSuccess }) => {
     setIsLoading(true);
     try {
       // The API endpoint for login should be under the /auth prefix
-      const response = await axios.post('http://localhost:8000/api/login', {
+      const response = await axios.post('http://localhost:8000/api/auth/login', {
         username: form.username,
         password: form.password
       });
