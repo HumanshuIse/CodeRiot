@@ -1,40 +1,42 @@
+# app/routes/new_problems.py
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.models.problem import Problem
-from app.schemas.problems import ProblemSubmitIn, ProblemOut # Changed ProblemSubmission to ProblemSubmitIn
-from app.core.security import get_current_user # Import get_current_user to ensure authorization
-from app.models.user import User # Import User model
+from app.schemas.problems import ProblemSubmitIn, ProblemOut
+from app.core.security import get_current_user
+from app.models.user import User
 from datetime import datetime
-import pytz # For timezone awareness
+import pytz
 
 router = APIRouter()
-
-# Define the Indian timezone
 IST = pytz.timezone('Asia/Kolkata')
 
 @router.post("/submit-problem", response_model=ProblemOut)
 def submit_problem(
-    problem_data: ProblemSubmitIn, # Changed parameter name for clarity
+    problem_data: ProblemSubmitIn,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user) # Ensures only authorized users can submit
+    current_user: User = Depends(get_current_user)
 ):
     """
-    Allows an authenticated user to submit a new problem idea for review.
-    The contributor ID and submission timestamp are automatically set by the backend.
+    Allows an authenticated user to submit a new problem idea,
+    including sample and hidden test cases.
     """
     
-    # Create the new Problem object
+    # Convert the Pydantic TestCases model to a dictionary for JSON storage
+    test_cases_dict = problem_data.test_cases.model_dump()
+    
     new_problem = Problem(
         title=problem_data.title,
         description=problem_data.description,
         difficulty=problem_data.difficulty,
-        tags=problem_data.tags,  # This assumes tags are stored as ARRAY in DB, otherwise join them
+        tags=problem_data.tags,
         constraints=problem_data.constraints,
-        contributor_id=current_user.id, # Automatically set from the authenticated user
-        submitted_at=datetime.now(IST), # Automatically set to current Indian time
-        status="pending" # Default status for new submissions
-        # reviewer_id is intentionally not set here, as it's for review process
+        test_cases=test_cases_dict,  # Store the dict in the JSONB field
+        contributor_id=current_user.id,
+        submitted_at=datetime.now(IST),
+        status="pending"
     )
 
     db.add(new_problem)

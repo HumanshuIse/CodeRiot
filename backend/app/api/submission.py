@@ -1,3 +1,4 @@
+# app/routes/submission.py
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,7 +13,6 @@ from app.schemas.submission import SubmissionIn, SubmissionOut
 
 router = APIRouter()
 
-# URL for your separate judge server
 JUDGE_SERVER_URL = "http://localhost:8001/execute"
 
 @router.post("/submission", response_model=SubmissionOut, tags=["Submissions"])
@@ -25,9 +25,19 @@ async def create_submission(
     if not problem or not problem.test_cases:
         raise HTTPException(status_code=404, detail="Problem or its test cases not found.")
 
+    # ✅ UPDATED: Combine sample and hidden test cases for final judging.
+    sample_cases = problem.test_cases.get('sample', [])
+    hidden_cases = problem.test_cases.get('hidden', [])
+    all_test_cases = sample_cases + hidden_cases
+
+    if not all_test_cases:
+        raise HTTPException(status_code=404, detail="No test cases found for this problem.")
+
     final_status = "Accepted"
-    # Loop through each test case for the problem
-    for i, case in enumerate(problem.test_cases):
+    total_cases = len(all_test_cases)
+
+    # Loop through the combined list of all test cases
+    for i, case in enumerate(all_test_cases):
         payload = {
             "code": submission_data.code,
             "language": submission_data.language,
@@ -35,18 +45,15 @@ async def create_submission(
         }
 
         try:
-            # Call the judge server to execute the code against one test case
             async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.post(JUDGE_SERVER_URL, json=payload)
-                response.raise_for_status() # Raise HTTP error for non-2xx responses
+                response.raise_for_status()
             
             result = response.json()
             
-            # Normalize whitespace and newlines for comparison
             actual_output = result.get("output", "").strip().replace('\r\n', '\n')
             expected_output = case.get("expected_output", "").strip().replace('\r\n', '\n')
 
-            # Check for runtime errors or wrong answers
             if result.get("exitCode") != 0 or result.get("error"):
                 final_status = f"Runtime Error on Test {i+1}"
                 break
@@ -59,7 +66,10 @@ async def create_submission(
         except Exception:
             final_status = f"Judge Error on Test {i+1}"
             break
-    
+
+    if final_status == "Accepted":
+        final_status = f"Accepted ({total_cases}/{total_cases})"
+
     # Save the final result to the database
     new_submission = Submission(
         user_id=current_user.id,

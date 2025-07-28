@@ -1,34 +1,28 @@
 // src/components/CodeEditor.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Play, Settings, Copy, Download, RefreshCw, FileText, Bug, UploadCloud, Loader } from 'lucide-react';
+import { Play, UploadCloud, Loader, CheckCircle2, XCircle } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 
-// CodeEditor doesn't need useNavigate directly as it's a content component.
-// Navigation logic for 'problem not found' or 'not logged in' is handled in App.jsx.
 const CodeEditor = ({ problem, match }) => {
   const [code, setCode] = useState('');
-  const [language, setLanguage] = useState('python'); // Default to a common competitive language
+  const [language, setLanguage] = useState('python');
   
-  // State for the "Run" functionality
-  const [runOutput, setRunOutput] = useState('');
-  const [runInput, setRunInput] = useState('');
-  const [isRunning, setIsRunning] = useState(false);
-  
-  // State for the "Submit" functionality
-  const [submissionStatus, setSubmissionStatus] = useState('Idle'); // Idle, Submitting, Finished
+  const [activeTestCaseIndex, setActiveTestCaseIndex] = useState(0);
+  const [testCaseOutputs, setTestCaseOutputs] = useState({});
+  const [isRunningCase, setIsRunningCase] = useState(null);
+
+  const [submissionStatus, setSubmissionStatus] = useState('Idle');
   const [submissionResult, setSubmissionResult] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState('testCases');
 
-  const [activeTab, setActiveTab] = useState('problem'); // Default to problem tab
-
-  // URLs
   const JUDGE_SERVER_URL = 'http://localhost:8001/execute';
   const SUBMISSION_API_URL = 'http://localhost:8000/api/submission';
 
   const languageTemplates = {
-    javascript: `// ${problem?.title || 'Problem Title'}\n\nfunction solve() {\n  // Write your code here\n  console.log("Hello, JavaScript!");\n}\n\nsolve();`,
     python: `# ${problem?.title || 'Problem Title'}\n\ndef solve():\n  # Write your code here\n  print("Hello, Python!")\n\nsolve()`,
+    javascript: `// ${problem?.title || 'Problem Title'}\n\nfunction solve() {\n  // Write your code here\n  console.log("Hello, JavaScript!");\n}\n\nsolve();`,
     java: `// ${problem?.title || 'Problem Title'}\n\npublic class Main {\n    public static void main(String[] args) {\n        // Write your code here\n        System.out.println("Hello, Java!");\n    }\n}`,
     cpp: `// ${problem?.title || 'Problem Title'}\n\n#include <iostream>\n\nvoid solve() {\n    // Write your code here\n    std::cout << "Hello, C++!" << std::endl;\n}\n\nint main() {\n    solve();\n    return 0;\n}`
   };
@@ -36,34 +30,28 @@ const CodeEditor = ({ problem, match }) => {
   useEffect(() => {
     if (problem) {
       setCode(languageTemplates[language] || '');
+      setTestCaseOutputs({});
+      setActiveTestCaseIndex(0);
     }
   }, [problem, language]);
-  
-  // Function for the "Run Code" button (tests against custom input)
-  const handleRunCode = async () => {
-    setIsRunning(true);
-    setRunOutput('');
-    setActiveTab('runOutput');
 
+  const handleRunCode = async (caseIndex) => {
+    setIsRunningCase(caseIndex);
+    const currentCase = problem.test_cases.sample[caseIndex];
+    
     try {
       const response = await axios.post(JUDGE_SERVER_URL, {
-        language: language,
-        code: code,
-        input: runInput,
+        language, code, input: currentCase.input,
       });
-      if (response.data.error) {
-        setRunOutput(response.data.error);
-      } else {
-        setRunOutput(response.data.output);
-      }
+      const output = response.data.error || response.data.output;
+      setTestCaseOutputs(prev => ({ ...prev, [caseIndex]: { output, expected: currentCase.expected_output } }));
     } catch (e) {
-      setRunOutput("Failed to connect to the judge server.");
+      setTestCaseOutputs(prev => ({ ...prev, [caseIndex]: { output: "Failed to connect to judge.", expected: currentCase.expected_output } }));
     } finally {
-      setIsRunning(false);
+      setIsRunningCase(null);
     }
   };
 
-  // Function for the "Submit" button (final judging)
   const handleSubmitCode = async () => {
     setIsSubmitting(true);
     setSubmissionStatus('Submitting...');
@@ -73,17 +61,10 @@ const CodeEditor = ({ problem, match }) => {
     try {
         const token = localStorage.getItem('token');
         const response = await axios.post(SUBMISSION_API_URL, {
-            problem_id: problem.id,
-            language: language,
-            code: code,
-            match_id: match?.match_id
-        }, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
+            problem_id: problem.id, language, code, match_id: match?.match_id
+        }, { headers: { 'Authorization': `Bearer ${token}` } });
         setSubmissionResult(response.data);
         setSubmissionStatus('Finished');
-
     } catch (error) {
         setSubmissionStatus('Error');
         setSubmissionResult({ status: error.response?.data?.detail || "An unexpected error occurred." });
@@ -92,94 +73,113 @@ const CodeEditor = ({ problem, match }) => {
     }
   };
 
-
   if (!problem) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white font-pixel">
+      <div className="h-screen bg-black flex items-center justify-center text-white font-pixel">
         <Loader className="w-8 h-8 animate-spin mr-4" />
         Waiting for a match...
       </div>
     );
   }
 
+  const sampleTestCases = problem.test_cases?.sample || [];
+
   return (
-    <div className="min-h-screen bg-black text-white p-4 font-tech">
-        <div className="flex h-[calc(100vh-2rem)] gap-4">
-
-            {/* Left Panel: Problem Description */}
-            <div className="w-1/3 bg-gray-900 rounded-lg p-6 border border-gray-800 flex flex-col">
-                <h1 className="font-pixel text-2xl text-cyan-400 mb-4">{problem.title}</h1>
-                <div className="text-sm text-gray-400 mb-4">
-                    <span className={`px-3 py-1 rounded-full text-xs ${
-                        problem.difficulty === 'Easy' ? 'bg-green-900 text-green-300' :
-                        problem.difficulty === 'Medium' ? 'bg-yellow-900 text-yellow-300' :
-                        'bg-red-900 text-red-300'
-                    }`}>{problem.difficulty}</span>
-                </div>
-                <div className="prose prose-invert prose-sm text-gray-300 overflow-y-auto flex-grow">
-                    <p>{problem.description}</p>
-                    {problem.constraints && <><h3>Constraints</h3><p>{problem.constraints}</p></>}
-                </div>
-            </div>
-
-            {/* Right Panel: Editor and I/O */}
-            <div className="w-2/3 flex flex-col gap-4">
-                {/* Top: Editor */}
-                <div className="bg-gray-900 rounded-lg border border-gray-800 flex-grow flex flex-col">
-                    <div className="bg-gray-800 p-2 flex justify-between items-center">
-                        <select
-                          value={language}
-                          onChange={(e) => setLanguage(e.target.value)}
-                          className="bg-gray-700 text-white px-3 py-1 rounded text-sm border border-gray-600"
-                        >
-                          <option value="python">Python</option>
-                          <option value="javascript">JavaScript</option>
-                          <option value="java">Java</option>
-                          <option value="cpp">C++</option>
-                        </select>
-                        <div className="flex items-center gap-4">
-                            <button onClick={handleRunCode} disabled={isRunning} className="flex items-center gap-2 px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50">
-                                <Play className="w-4 h-4" /> Run
-                            </button>
-                            <button onClick={handleSubmitCode} disabled={isSubmitting} className="flex items-center gap-2 px-3 py-1 bg-green-600 rounded hover:bg-green-700 disabled:opacity-50">
-                                {isSubmitting ? <Loader className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
-                                {isSubmitting ? 'Submitting' : 'Submit'}
-                            </button>
-                        </div>
+    <div className="h-screen bg-black text-white p-2 font-tech">
+        <div className="flex flex-col lg:flex-row h-full gap-2">
+            {/* ✅ MODIFIED: Left Panel now contains both description AND test case tabs */}
+            <div className="w-full lg:w-1/2 bg-gray-900 rounded-lg border border-gray-800 flex flex-col">
+                {/* Top part of the left panel for description */}
+                <div className="p-4 overflow-y-auto">
+                    <h1 className="font-pixel text-xl text-cyan-400 mb-4 flex-shrink-0">{problem.title}</h1>
+                    <div className="text-sm text-gray-400 mb-4 flex-shrink-0">
+                        <span className={`px-3 py-1 rounded-full text-xs ${ problem.difficulty === 'Easy' ? 'bg-green-900 text-green-300' : problem.difficulty === 'Medium' ? 'bg-yellow-900 text-yellow-300' : 'bg-red-900 text-red-300' }`}>
+                            {problem.difficulty}
+                        </span>
                     </div>
-                    <div className="flex-grow p-2">
-                        <Editor
-                            height="100%"
-                            language={language}
-                            theme={'vs-dark'}
-                            value={code}
-                            onChange={(newValue) => setCode(newValue)}
-                            options={{ minimap: { enabled: false }, scrollBeyondLastLine: false, automaticLayout: true, fontSize: 14 }}
-                        />
-                    </div>
-                </div>
-
-                {/* Bottom: I/O and Submission Results */}
-                <div className="bg-gray-900 rounded-lg border border-gray-800 h-1/3 flex flex-col">
-                     <div className="flex border-b border-gray-800">
-                        <button onClick={() => setActiveTab('runInput')} className={`flex-1 py-2 text-center text-sm ${activeTab === 'runInput' ? 'bg-gray-800' : ''}`}><FileText className="inline w-4 h-4 mr-1"/> Custom Input</button>
-                        <button onClick={() => setActiveTab('runOutput')} className={`flex-1 py-2 text-center text-sm ${activeTab === 'runOutput' ? 'bg-gray-800' : ''}`}><Bug className="inline w-4 h-4 mr-1"/> Run Output</button>
-                        <button onClick={() => setActiveTab('submission')} className={`flex-1 py-2 text-center text-sm ${activeTab === 'submission' ? 'bg-gray-800' : ''}`}><UploadCloud className="inline w-4 h-4 mr-1"/> Submission Result</button>
-                    </div>
-                    <div className="p-4 flex-grow overflow-y-auto font-mono text-sm">
-                        {activeTab === 'runInput' && <textarea value={runInput} onChange={(e) => setRunInput(e.target.value)} className="w-full h-full bg-transparent text-white focus:outline-none resize-none" />}
-                        {activeTab === 'runOutput' && <pre className="whitespace-pre-wrap">{runOutput || 'Run code to see output here.'}</pre>}
-                        {activeTab === 'submission' && (
+                    <div className="text-gray-300 text-sm space-y-4">
+                        <pre className="whitespace-pre-wrap font-tech leading-relaxed">{problem.description}</pre>
+                        {problem.constraints && (
                             <div>
-                                <p>Status: <span className="font-bold">{submissionStatus}</span></p>
-                                {submissionResult && (
-                                    <div className={`mt-2 p-2 rounded ${submissionResult.status.includes('Accepted') ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}`}>
-                                        <p>Final Verdict: {submissionResult.status}</p>
-                                    </div>
-                                )}
+                                <h3 className="font-bold mb-2">Constraints</h3>
+                                <pre className="whitespace-pre-wrap font-tech text-gray-400">{problem.constraints}</pre>
                             </div>
                         )}
                     </div>
+                </div>
+                
+                {/* ✅ MOVED: Bottom part of the left panel for I/O */}
+                <div className="border-t border-gray-800 mt-auto flex flex-col h-1/2 max-h-80 flex-shrink-0">
+                    <div className="flex border-b border-gray-800 flex-shrink-0">
+                        <button onClick={() => setActiveTab('testCases')} className={`flex-1 py-2 text-center text-sm ${activeTab === 'testCases' ? 'bg-gray-800' : ''}`}>Test Cases</button>
+                        <button onClick={() => setActiveTab('submission')} className={`flex-1 py-2 text-center text-sm ${activeTab === 'submission' ? 'bg-gray-800' : ''}`}>Submission</button>
+                    </div>
+                    
+                    {activeTab === 'testCases' && (
+                        <div className="p-2 flex-grow flex flex-col overflow-y-auto">
+                           {/* Test Case Content (no changes to logic) */}
+                           <div className="flex items-center gap-2 mb-2 flex-shrink-0">
+                                {sampleTestCases.map((_, index) => (
+                                    <button key={index} onClick={() => setActiveTestCaseIndex(index)} className={`px-3 py-1 rounded text-sm ${activeTestCaseIndex === index ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}>
+                                        Case {index + 1}
+                                    </button>
+                                ))}
+                            </div>
+                            {sampleTestCases[activeTestCaseIndex] && (
+                                <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-2 font-mono text-xs">
+                                    <div><label className="text-gray-400">Input:</label><pre className="bg-gray-800 p-2 rounded whitespace-pre-wrap">{sampleTestCases[activeTestCaseIndex].input}</pre></div>
+                                    <div><label className="text-gray-400">Expected:</label><pre className="bg-gray-800 p-2 rounded whitespace-pre-wrap">{sampleTestCases[activeTestCaseIndex].expected_output}</pre></div>
+                                    <div className="col-span-1 md:col-span-2">
+                                        <label className="text-gray-400">Your Output:</label>
+                                        <div className="bg-gray-800 p-2 rounded whitespace-pre-wrap min-h-[40px] flex justify-between items-center">
+                                            <pre>{testCaseOutputs[activeTestCaseIndex]?.output}</pre>
+                                            {testCaseOutputs[activeTestCaseIndex] && (testCaseOutputs[activeTestCaseIndex].output?.trim() === testCaseOutputs[activeTestCaseIndex].expected?.trim()
+                                                ? <CheckCircle2 className="text-green-500 flex-shrink-0" size={16}/>
+                                                : <XCircle className="text-red-500 flex-shrink-0" size={16}/>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            <div className="pt-2 mt-auto flex-shrink-0">
+                                <button onClick={() => handleRunCode(activeTestCaseIndex)} disabled={isRunningCase !== null} className="flex items-center gap-2 px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50">
+                                    {isRunningCase === activeTestCaseIndex ? <Loader className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                                    Run Case {activeTestCaseIndex + 1}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    {activeTab === 'submission' && (
+                        <div className="p-4">
+                            <p>Status: <span className="font-bold">{submissionStatus}</span></p>
+                            {submissionResult && (
+                                <div className={`mt-2 p-2 rounded ${submissionResult.status.includes('Accepted') ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}`}>
+                                    <p>Final Verdict: {submissionResult.status}</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* ✅ MODIFIED: Right Panel now ONLY contains the code editor and fills all available space */}
+            <div className="w-full lg:w-1/2 bg-gray-900 rounded-lg border border-gray-800 flex flex-col">
+                <div className="bg-gray-800 p-2 flex justify-between items-center flex-shrink-0">
+                    <select value={language} onChange={(e) => setLanguage(e.target.value)} className="bg-gray-700 text-white px-3 py-1 rounded text-sm border border-gray-600">
+                        <option value="python">Python</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="java">Java</option>
+                        <option value="cpp">C++</option>
+                    </select>
+                    <div className="flex items-center gap-4">
+                        <button onClick={handleSubmitCode} disabled={isSubmitting} className="flex items-center gap-2 px-3 py-1 bg-green-600 rounded hover:bg-green-700 disabled:opacity-50">
+                            {isSubmitting ? <Loader className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+                            {isSubmitting ? 'Submitting' : 'Submit'}
+                        </button>
+                    </div>
+                </div>
+                <div className="flex-grow p-1">
+                    <Editor height="100%" language={language} theme={'vs-dark'} value={code} onChange={(newValue) => setCode(newValue)} options={{ minimap: { enabled: false }, fontSize: 14 }} />
                 </div>
             </div>
         </div>

@@ -1,72 +1,86 @@
 // src/components/ProblemSubmissionForm.jsx
-"use client"
-
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { PlusCircle, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const ProblemSubmissionForm = ({ onToast }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    difficulty: 'Easy', // Default difficulty
-    tags: [], // Tags will be managed as an array of strings
-    tagInput: '', // Temporary state for current tag input
+    difficulty: 'Easy',
+    tags: [],
+    tagInput: '',
     constraints: '',
+    test_cases: {
+      sample: [{ input: '', expected_output: '' }],
+      hidden: [{ input: '', expected_output: '' }]
+    }
   });
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate(); // Initialize useNavigate
+  const navigate = useNavigate();
 
-  const buttonClassName = "bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-6 py-3 font-tech font-semibold text-base rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105";
-  const inputClassName = "flex h-10 w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 font-tech";
-  const labelClassName = "text-sm font-semibold text-gray-300 mb-1 font-tech";
-  const selectClassName = "flex h-10 w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 font-tech";
-  const textareaClassName = "flex min-h-[80px] w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 font-tech";
+  const classNames = {
+    button: "bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-6 py-3 font-tech font-semibold text-base rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105",
+    input: "flex h-10 w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 font-tech",
+    label: "text-sm font-semibold text-gray-300 mb-1 font-tech",
+    select: "flex h-10 w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 font-tech",
+    textarea: "flex min-h-[80px] w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 font-tech",
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prevData) => ({
-      ...prevData,
-      [name]: value,
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleTestCaseChange = (type, index, e) => {
+    const { name, value } = e.target;
+    setFormData(prev => {
+      const updatedCases = [...prev.test_cases[type]];
+      updatedCases[index] = { ...updatedCases[index], [name]: value };
+      return { ...prev, test_cases: { ...prev.test_cases, [type]: updatedCases } };
+    });
+  };
+
+  const addTestCase = (type) => {
+    setFormData(prev => ({
+      ...prev,
+      test_cases: {
+        ...prev.test_cases,
+        [type]: [...prev.test_cases[type], { input: '', expected_output: '' }]
+      }
     }));
   };
 
-  const handleTagInputChange = (e) => {
-    setFormData((prevData) => ({
-      ...prevData,
-      tagInput: e.target.value,
+  const removeTestCase = (type, index) => {
+    if (formData.test_cases[type].length <= 1) {
+      onToast(`You must have at least one ${type} test case.`, "error");
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      test_cases: {
+        ...prev.test_cases,
+        [type]: prev.test_cases[type].filter((_, i) => i !== index)
+      }
     }));
   };
-
-  const handleKeyDown = (e) => {
+  
+  const handleTagInputChange = (e) => setFormData(prev => ({...prev, tagInput: e.target.value}));
+  const handleTagKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
       const newTag = formData.tagInput.trim();
       if (newTag && !formData.tags.includes(newTag)) {
-        setFormData((prevData) => ({
-          ...prevData,
-          tags: [...prevData.tags, newTag],
-          tagInput: '',
-        }));
+        setFormData(prev => ({...prev, tags: [...prev.tags, newTag], tagInput: ''}));
       }
-    } else if (e.key === 'Backspace' && formData.tagInput === '') {
-      setFormData((prevData) => ({
-        ...prevData,
-        tags: prevData.tags.slice(0, prevData.tags.length - 1),
-      }));
     }
   };
-
-  const removeTag = (tagToRemove) => {
-    setFormData((prevData) => ({
-      ...prevData,
-      tags: prevData.tags.filter(tag => tag !== tagToRemove),
-    }));
-  };
+  const removeTag = (tagToRemove) => setFormData(prev => ({...prev, tags: prev.tags.filter(tag => tag !== tagToRemove)}));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -76,141 +90,97 @@ const ProblemSubmissionForm = ({ onToast }) => {
       if (!token) {
         onToast("You must be logged in to submit a problem.", "error");
         setIsLoading(false);
-        navigate('/auth'); // Redirect to auth if not logged in
+        navigate('/auth');
         return;
       }
 
-      const response = await axios.post(
+      const { tagInput, ...payload } = formData;
+      
+      await axios.post(
         'http://localhost:8000/api/problems/submit-problem',
-        {
-          title: formData.title,
-          description: formData.description,
-          difficulty: formData.difficulty,
-          tags: formData.tags,
-          constraints: formData.constraints,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        }
+        payload,
+        { headers: { 'Authorization': `Bearer ${token}` } }
       );
 
-      if (response.status === 200) {
-        onToast('Problem submitted successfully for review!', 'success');
-        setFormData({
-          title: '',
-          description: '',
-          difficulty: 'Easy',
-          tags: [],
-          tagInput: '',
-          constraints: '',
-        });
-        navigate('/profile'); // Optionally navigate back to profile or a confirmation page
-      }
+      onToast('Problem submitted successfully for review!', 'success');
+      navigate('/profile');
     } catch (error) {
       console.error('Problem submission error:', error);
-      const errorMessage = error.response?.data?.detail || 'Failed to submit problem. Please try again.';
-      onToast(errorMessage, 'error');
+      onToast(error.response?.data?.detail || 'Failed to submit problem.', 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const TestCaseInputs = ({ type, title }) => (
+    <div>
+      <h3 className="text-xl font-pixel text-cyan-400 mb-4">{title}</h3>
+      {formData.test_cases[type].map((testCase, index) => (
+        <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-gray-800 pb-4 mb-4">
+          <div>
+            <Label htmlFor={`${type}-input-${index}`} className={classNames.label}>Input</Label>
+            <Textarea id={`${type}-input-${index}`} name="input" value={testCase.input} onChange={(e) => handleTestCaseChange(type, index, e)} className={classNames.textarea} required />
+          </div>
+          <div className="flex flex-col">
+            <Label htmlFor={`${type}-expected-${index}`} className={classNames.label}>Expected Output</Label>
+            <Textarea id={`${type}-expected-${index}`} name="expected_output" value={testCase.expected_output} onChange={(e) => handleTestCaseChange(type, index, e)} className={classNames.textarea} required />
+            <button type="button" onClick={() => removeTestCase(type, index)} className="mt-2 ml-auto text-red-500 hover:text-red-400">
+              <Trash2 size={16} />
+            </button>
+          </div>
+        </div>
+      ))}
+      <Button type="button" variant="outline" onClick={() => addTestCase(type)} className="border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white mt-2">
+        <PlusCircle size={16} className="mr-2" /> Add {type === 'sample' ? 'Sample' : 'Hidden'} Case
+      </Button>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center py-12 px-4 relative z-10">
-      <div className="w-full max-w-2xl bg-gray-900/70 backdrop-blur-sm rounded-lg shadow-xl p-8 border border-gray-700 pixel-border animate-glow-slow">
-        <h2 className="text-3xl font-pixel text-center mb-8 bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent text-shadow-neon">
-          Submit Your Problem Idea
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <Label htmlFor="title" className={labelClassName}>Problem Title</Label>
-            <Input
-              type="text"
-              id="title"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              className={inputClassName}
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="description" className={labelClassName}>Description</Label>
-            <Textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              className={textareaClassName + " h-32"}
-              placeholder="Provide a detailed description of the problem, including example inputs/outputs."
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="constraints" className={labelClassName}>Constraints</Label>
-            <Textarea
-              id="constraints"
-              name="constraints"
-              value={formData.constraints}
-              onChange={handleChange}
-              className={textareaClassName}
-              placeholder="e.g., 0 <= n <= 10^5, -10^9 <= arr[i] <= 10^9"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="difficulty" className={labelClassName}>Difficulty</Label>
-            <select
-              id="difficulty"
-              name="difficulty"
-              value={formData.difficulty}
-              onChange={handleChange}
-              className={selectClassName}
-            >
-              <option value="Easy">Easy</option>
-              <option value="Medium">Medium</option>
-              <option value="Hard">Hard</option>
-            </select>
-          </div>
-
-          <div>
-            <Label htmlFor="tagInput" className={labelClassName}>Tags (Type and press Enter or Comma)</Label>
-            <div className={`flex flex-wrap items-center gap-2 ${inputClassName} min-h-[40px] p-2`}>
-              {formData.tags.map((tag, index) => (
-                <span
-                  key={index}
-                  className="bg-blue-600 text-white px-2 py-1 rounded-md text-sm font-tech flex items-center"
-                >
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() => removeTag(tag)}
-                    className="ml-1 text-white hover:text-gray-200 focus:outline-none"
-                  >
-                    &times;
-                  </button>
-                </span>
-              ))}
-              <Input
-                type="text"
-                id="tagInput"
-                name="tagInput"
-                value={formData.tagInput}
-                onChange={handleTagInputChange}
-                onKeyDown={handleKeyDown}
-                className="!h-auto !w-auto flex-grow bg-transparent border-none focus-visible:ring-0 focus-visible:outline-none"
-                placeholder={formData.tags.length === 0 ? "Add tags (e.g., array, dp)" : ""}
-              />
+    <div className="min-h-screen bg-black text-white flex items-center justify-center py-12 px-4">
+      <div className="w-full max-w-4xl bg-gray-900/70 backdrop-blur-sm rounded-lg shadow-xl p-8 border border-gray-700 pixel-border">
+        <h2 className="text-3xl font-pixel text-center mb-8 text-shadow-neon text-white">Submit Your Problem</h2>
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor="title" className={classNames.label}>Problem Title</Label>
+              <Input type="text" id="title" name="title" value={formData.title} onChange={handleChange} className={classNames.input} required />
+            </div>
+            <div>
+              <Label htmlFor="difficulty" className={classNames.label}>Difficulty</Label>
+              <select id="difficulty" name="difficulty" value={formData.difficulty} onChange={handleChange} className={classNames.select}>
+                <option>Easy</option><option>Medium</option><option>Hard</option>
+              </select>
             </div>
           </div>
+          <div>
+            <Label htmlFor="description" className={classNames.label}>Description</Label>
+            <Textarea id="description" name="description" value={formData.description} onChange={handleChange} className={classNames.textarea + " h-32"} required />
+          </div>
+          <div>
+            <Label htmlFor="constraints" className={classNames.label}>Constraints</Label>
+            <Textarea id="constraints" name="constraints" value={formData.constraints} onChange={handleChange} className={classNames.textarea} />
+          </div>
+          <div>
+            <Label htmlFor="tagInput" className={classNames.label}>Tags (Type and press Enter or Comma)</Label>
+            <div className={`flex flex-wrap items-center gap-2 ${classNames.input} min-h-[40px] p-2`}>
+              {formData.tags.map((tag, index) => (
+                <span key={index} className="bg-blue-600 text-white px-2 py-1 rounded-md text-sm font-tech flex items-center">
+                  {tag}
+                  <button type="button" onClick={() => removeTag(tag)} className="ml-1 text-white hover:text-gray-200 focus:outline-none">&times;</button>
+                </span>
+              ))}
+              <Input type="text" id="tagInput" name="tagInput" value={formData.tagInput} onChange={handleTagInputChange} onKeyDown={handleTagKeyDown} className="!h-auto !w-auto flex-grow bg-transparent border-none focus-visible:ring-0 focus-visible:outline-none" placeholder={formData.tags.length === 0 ? "Add tags..." : ""} />
+            </div>
+          </div>
+          
+          <div className="space-y-8 pt-4 border-t border-gray-800">
+            <TestCaseInputs type="sample" title="Sample Test Cases" />
+            <TestCaseInputs type="hidden" title="Hidden Test Cases" />
+          </div>
 
-          <Button type="submit" disabled={isLoading} className={buttonClassName + " w-full"}>
-            {isLoading ? 'Submitting...' : 'Submit Problem Idea'}
+          <Button type="submit" disabled={isLoading} className={classNames.button + " w-full"}>
+            {isLoading ? 'Submitting...' : 'Submit Problem for Review'}
           </Button>
         </form>
       </div>
