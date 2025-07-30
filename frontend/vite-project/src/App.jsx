@@ -12,7 +12,7 @@ import CodeEditor from './components/CodeEditor';
 import ProblemSubmissionForm from './components/ProblemSubmissionForm';
 
 // Import Pages
-import Home from './pages/Home';
+import Home from './pages/Home'; // Corrected import
 import UserProfile from './pages/UserProfile';
 import Matchmaking from './pages/Matchmaking';
 
@@ -124,7 +124,7 @@ const AppContent = ({
   handleMatchFound,
   authTab,
   setAuthTab,
-  showToast, // Destructure showToast here
+  showToast,
 }) => {
   const navigate = useNavigate(); // Initialize useNavigate
 
@@ -144,7 +144,7 @@ const AppContent = ({
       <Navbar
         isLoggedIn={isLoggedIn}
         username={username}
-        onLogout={() => handleLogout(navigate)} // Pass navigate to handleLogout
+        onLogout={() => handleLogout(navigate)}
       />
       <Routes>
         <Route path="/" element={<Home onGetStarted={handleGetStarted} />} />
@@ -152,7 +152,6 @@ const AppContent = ({
           isLoggedIn ? (
             <CodeEditor problem={currentMatch?.problem} match={currentMatch} />
           ) : (
-            // Redirect to auth if not logged in
             <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
           )
         } />
@@ -160,7 +159,6 @@ const AppContent = ({
           isLoggedIn ? (
             <Matchmaking userId={userId} username={username} onToast={showToast} onMatchFound={(matchData) => handleMatchFound(matchData, navigate)} />
           ) : (
-            // Redirect to auth if not logged in
             <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
           )
         } />
@@ -171,9 +169,8 @@ const AppContent = ({
         } />
         <Route path="/profile" element={
           isLoggedIn ? (
-            <UserProfile onToast={showToast} navigate={navigate} /> // Pass navigate instead of setActiveTab
+            <UserProfile onToast={showToast} navigate={navigate} />
           ) : (
-            // Redirect to auth if not logged in
             <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
           )
         } />
@@ -181,7 +178,6 @@ const AppContent = ({
           isLoggedIn ? (
             <ProblemSubmissionForm onToast={showToast} />
           ) : (
-            // Redirect to auth if not logged in
             <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
           )
         } />

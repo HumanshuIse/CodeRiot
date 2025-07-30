@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Menu, X, Code, Users, Trophy, User, LogOut, Terminal, Home as HomeIcon } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom'; // Import hooks
 
-const Navbar = ({ isLoggedIn, username, onLogout }) => { // Removed activeTab, setActiveTab
+const Navbar = ({ isLoggedIn, username, onLogout }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate(); // Initialize useNavigate
   const location = useLocation(); // Initialize useLocation to get current path
@@ -15,16 +15,13 @@ const Navbar = ({ isLoggedIn, username, onLogout }) => { // Removed activeTab, s
     { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, path: '/leaderboard' },
   ];
 
-  const handleNavClick = (path) => { // Now takes a path instead of tabId
-    navigate(path); // Use navigate to change route
+  const handleNavClick = (path) => {
+    navigate(path);
     setIsMobileMenuOpen(false);
   };
 
-  // Determine active tab based on current path
   const getActivePath = (path) => {
-    // For home, only match exact path
     if (path === '/') return location.pathname === path;
-    // For others, check if path starts with the route
     return location.pathname.startsWith(path);
   };
 

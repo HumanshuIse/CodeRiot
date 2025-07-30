@@ -1,51 +1,51 @@
-"use client"
+// src/pages/Home.jsx
+"use client";
 
-import { useState, useEffect } from "react"
-import { Code, Trophy, Sword, Timer, Target, ArrowRight, Play, Star, Github, Zap, Users, Shield } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { useState, useEffect } from "react";
+import { Code, Trophy, Sword, Timer, Target, ArrowRight, Play, Star, Github, Zap, Users, Shield } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
-export default function CodeRiotLanding({ onGetStarted }) { // onGetStarted is now a direct prop from App.jsx
-  const [displayText, setDisplayText] = useState("")
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [isVisible, setIsVisible] = useState(false)
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+export default function Home({ onGetStarted }) {
+  const [displayText, setDisplayText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
-  const words = ["CodeRiot", "Battle", "Compete", "Conquer", "Code"]
-  const currentWord = words[currentIndex]
+  const words = ["CodeRiot", "Battle", "Compete", "Conquer", "Code"];
+  const currentWord = words[currentIndex];
 
   useEffect(() => {
-    setIsVisible(true)
+    setIsVisible(true);
 
     const handleMouseMove = (e) => {
-      setMousePosition({ x: e.clientX, y: e.clientY })
-    }
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
 
-    window.addEventListener("mousemove", handleMouseMove)
-    return () => window.removeEventListener("mousemove", handleMouseMove)
-  }, [])
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
 
   useEffect(() => {
     const timeout = setTimeout(
       () => {
         if (!isDeleting && displayText === currentWord) {
-          setTimeout(() => setIsDeleting(true), 2000)
+          setTimeout(() => setIsDeleting(true), 2000);
         } else if (isDeleting && displayText === "") {
-          setIsDeleting(false)
-          setCurrentIndex((prevIndex) => (prevIndex + 1) % words.length)
+          setIsDeleting(false);
+          setCurrentIndex((prevIndex) => (prevIndex + 1) % words.length);
         } else if (isDeleting) {
-          setDisplayText(currentWord.substring(0, displayText.length - 1))
+          setDisplayText(currentWord.substring(0, displayText.length - 1));
         } else {
-          setDisplayText(currentWord.substring(0, displayText.length + 1))
+          setDisplayText(currentWord.substring(0, displayText.length + 1));
         }
       },
       isDeleting ? 100 : 150,
-    )
+    );
 
-    return () => clearTimeout(timeout)
-  }, [displayText, isDeleting, currentWord, currentIndex])
+    return () => clearTimeout(timeout);
+  }, [displayText, isDeleting, currentWord, currentIndex]);
 
   const features = [
     {
@@ -72,27 +72,27 @@ export default function CodeRiotLanding({ onGetStarted }) { // onGetStarted is n
       description: "Track progress and compete for the top spot on dynamic leaderboards.",
       color: "from-green-500 to-emerald-500",
     },
-  ]
+  ];
 
   const stats = [
     { number: "10K+", label: "ACTIVE CODERS" },
     { number: "50K+", label: "BATTLES FOUGHT" },
     { number: "500+", label: "DSA PROBLEMS" },
     { number: "24/7", label: "LIVE MATCHES" },
-  ]
+  ];
 
   const FloatingCodeBlock = ({ children, style = {}, delay = 0, size = "text-xl", textColor = "text-green-400", borderColor = "border-green-500/30", bgColor = "bg-gray-800/30" }) => (
     <div
-      className={`absolute ${bgColor} backdrop-blur-sm border ${borderColor} rounded-lg p-2 ${size} font-pixel ${textColor} opacity-50 animate-float`} // Opacity set to 50% for better visibility
+      className={`absolute ${bgColor} backdrop-blur-sm border ${borderColor} rounded-lg p-2 ${size} font-pixel ${textColor} opacity-50 animate-float`}
       style={{
         animationDelay: `${delay}s`,
-        ...style, // Allow direct style overrides for positioning
+        ...style,
         transform: `translate(${mousePosition.x * 0.02}px, ${mousePosition.y * 0.02}px)`,
       }}
     >
       {children}
     </div>
-  )
+  );
 
   const floatingElements = [
     { text: 'QUICKSORT()', top: '10%', left: '10%', size: 'text-2xl', textColor: 'text-cyan-400', delay: 0.1 },
@@ -118,68 +118,6 @@ export default function CodeRiotLanding({ onGetStarted }) { // onGetStarted is n
 
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap');
-
-        .font-tech {
-          font-family: 'Rajdhani', sans-serif;
-        }
-        
-        @font-face {
-          font-family: 'PressStart2P';
-          src: url('/src/assets/fonts/PressStart2P.ttf') format('truetype');
-          font-weight: normal;
-          font-style: normal;
-          font-display: swap;
-        }
-        
-        .font-pixel {
-          font-family: 'PressStart2P', 'Courier New', monospace;
-          line-height: 1.6;
-        }
-        
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-15px) rotate(1deg); }
-        }
-        
-        @keyframes float-reverse {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(15px) rotate(-1deg); }
-        }
-        
-        @keyframes glow {
-          0%, 100% { box-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 15px #00ffff; }
-          50% { box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #00ffff; }
-        }
-        
-        .animate-float {
-          animation: float 4s ease-in-out infinite;
-        }
-        
-        .animate-float-reverse {
-          animation: float-reverse 5s ease-in-out infinite;
-        }
-        
-        .animate-glow {
-          animation: glow 2s ease-in-out infinite;
-        }
-        
-        .text-shadow-neon {
-          text-shadow: 
-            0 0 5px currentColor,
-            0 0 10px currentColor,
-            0 0 15px currentColor,
-            0 0 20px currentColor;
-        }
-        
-        .pixel-border {
-          border-image: linear-gradient(45deg, #00ffff, #ff00ff) 1;
-          border-style: solid;
-          border-width: 2px;
-        }
-      `}</style>
-
       {/* Animated Background with 3D Elements */}
       <div className="fixed inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-gray-900" />
@@ -224,7 +162,7 @@ export default function CodeRiotLanding({ onGetStarted }) { // onGetStarted is n
 
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
             <Button
-              onClick={onGetStarted} // Use the onGetStarted prop
+              onClick={onGetStarted}
               size="lg"
               className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-8 py-4 font-tech font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
             >
@@ -356,7 +294,7 @@ export default function CodeRiotLanding({ onGetStarted }) { // onGetStarted is n
             YOUR VICTORY AWAITS
           </p>
           <Button
-            onClick={onGetStarted} // Use the onGetStarted prop
+            onClick={onGetStarted}
             size="lg"
             className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-10 py-5 font-tech font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
           >
@@ -400,5 +338,5 @@ export default function CodeRiotLanding({ onGetStarted }) { // onGetStarted is n
         </div>
       </footer>
     </div>
-  )
+  );
 }
