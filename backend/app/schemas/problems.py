@@ -1,6 +1,6 @@
 # app/schemas/problems.py
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 
@@ -9,21 +9,18 @@ class TestCase(BaseModel):
     input: str
     expected_output: str
 
-# A schema for the structured test cases object
-class TestCases(BaseModel):
-    sample: List[TestCase] = []
-    hidden: List[TestCase] = []
+# REMOVED: The TestCases class is no longer needed.
 
-# Schema for incoming problem submissions, now including test cases
+# MODIFIED: Schema for incoming problems now takes a simple list of test cases.
 class ProblemSubmitIn(BaseModel):
     title: str
     description: str
     difficulty: Optional[str] = None
     tags: Optional[List[str]] = None
     constraints: Optional[str] = None
-    test_cases: TestCases # This will hold the sample and hidden cases
+    test_cases: List[TestCase] # This is now a simple list
 
-# Schema for returning a problem, also updated
+# MODIFIED: Schema for returning a problem is also simplified.
 class ProblemOut(BaseModel):
     id: int
     title: str
@@ -34,7 +31,13 @@ class ProblemOut(BaseModel):
     contributor_id: int
     status: str
     submitted_at: datetime
-    test_cases: Optional[TestCases] = None
+    test_cases: Optional[List[TestCase]] = None # This is now a simple list
+
+    # --- MODIFIED: Dynamic fields for problem retrieval ---
+    frontend_template_python: Optional[str] = None
+    frontend_template_cpp: Optional[str] = None
+    frontend_template_javascript: Optional[str] = None
+    frontend_template_java: Optional[str] = None
 
     class Config:
         from_attributes = True

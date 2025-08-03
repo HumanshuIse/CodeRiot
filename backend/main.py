@@ -3,6 +3,9 @@ from app.api import auth,match,user,submission
 from app.db.database import Base, engine
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import new_problems
+from app.models.user import User
+from app.models.problem import Problem
+from app.models.submission import Submission
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()

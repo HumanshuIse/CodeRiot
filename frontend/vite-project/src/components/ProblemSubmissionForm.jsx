@@ -1,4 +1,3 @@
-// src/components/ProblemSubmissionForm.jsx
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Button } from "@/components/ui/button";
@@ -16,10 +15,8 @@ const ProblemSubmissionForm = ({ onToast }) => {
     tags: [],
     tagInput: '',
     constraints: '',
-    test_cases: {
-      sample: [{ input: '', expected_output: '' }],
-      hidden: [{ input: '', expected_output: '' }]
-    }
+    // MODIFIED: test_cases is now a simple array.
+    test_cases: [{ input: '', expected_output: '' }],
   });
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -30,6 +27,7 @@ const ProblemSubmissionForm = ({ onToast }) => {
     label: "text-sm font-semibold text-gray-300 mb-1 font-tech",
     select: "flex h-10 w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 font-tech",
     textarea: "flex min-h-[80px] w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 font-tech",
+    h3: "text-xl font-pixel text-cyan-400 mb-4",
   };
 
   const handleChange = (e) => {
@@ -37,36 +35,31 @@ const ProblemSubmissionForm = ({ onToast }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleTestCaseChange = (type, index, e) => {
+  // MODIFIED: Simplified test case handler
+  const handleTestCaseChange = (index, e) => {
     const { name, value } = e.target;
-    setFormData(prev => {
-      const updatedCases = [...prev.test_cases[type]];
-      updatedCases[index] = { ...updatedCases[index], [name]: value };
-      return { ...prev, test_cases: { ...prev.test_cases, [type]: updatedCases } };
-    });
+    const updatedCases = [...formData.test_cases];
+    updatedCases[index] = { ...updatedCases[index], [name]: value };
+    setFormData(prev => ({ ...prev, test_cases: updatedCases }));
   };
 
-  const addTestCase = (type) => {
+  // MODIFIED: Simplified add test case handler
+  const addTestCase = () => {
     setFormData(prev => ({
       ...prev,
-      test_cases: {
-        ...prev.test_cases,
-        [type]: [...prev.test_cases[type], { input: '', expected_output: '' }]
-      }
+      test_cases: [...prev.test_cases, { input: '', expected_output: '' }]
     }));
   };
 
-  const removeTestCase = (type, index) => {
-    if (formData.test_cases[type].length <= 1) {
-      onToast(`You must have at least one ${type} test case.`, "error");
+  // MODIFIED: Simplified remove test case handler
+  const removeTestCase = (index) => {
+    if (formData.test_cases.length <= 1) {
+      onToast("You must have at least one test case.", "error");
       return;
     }
     setFormData(prev => ({
       ...prev,
-      test_cases: {
-        ...prev.test_cases,
-        [type]: prev.test_cases[type].filter((_, i) => i !== index)
-      }
+      test_cases: prev.test_cases.filter((_, i) => i !== index)
     }));
   };
   
@@ -93,7 +86,7 @@ const ProblemSubmissionForm = ({ onToast }) => {
         navigate('/auth');
         return;
       }
-
+      
       const { tagInput, ...payload } = formData;
       
       await axios.post(
@@ -112,26 +105,43 @@ const ProblemSubmissionForm = ({ onToast }) => {
     }
   };
 
-  const TestCaseInputs = ({ type, title }) => (
+  // MODIFIED: Simplified JSX for rendering test cases
+  const TestCaseInputs = () => (
     <div>
-      <h3 className="text-xl font-pixel text-cyan-400 mb-4">{title}</h3>
-      {formData.test_cases[type].map((testCase, index) => (
+      <h3 className={classNames.h3}>Test Cases</h3>
+      {formData.test_cases.map((testCase, index) => (
         <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-gray-800 pb-4 mb-4">
           <div>
-            <Label htmlFor={`${type}-input-${index}`} className={classNames.label}>Input</Label>
-            <Textarea id={`${type}-input-${index}`} name="input" value={testCase.input} onChange={(e) => handleTestCaseChange(type, index, e)} className={classNames.textarea} required />
+            <Label htmlFor={`input-${index}`} className={classNames.label}>Input (stdin)</Label>
+            <Textarea 
+              id={`input-${index}`} 
+              name="input" 
+              value={testCase.input} 
+              onChange={(e) => handleTestCaseChange(index, e)} 
+              className={classNames.textarea}
+              placeholder="Enter each input on a new line, just as it would be read from the console."
+              required 
+            />
           </div>
           <div className="flex flex-col">
-            <Label htmlFor={`${type}-expected-${index}`} className={classNames.label}>Expected Output</Label>
-            <Textarea id={`${type}-expected-${index}`} name="expected_output" value={testCase.expected_output} onChange={(e) => handleTestCaseChange(type, index, e)} className={classNames.textarea} required />
-            <button type="button" onClick={() => removeTestCase(type, index)} className="mt-2 ml-auto text-red-500 hover:text-red-400">
+            <Label htmlFor={`expected-${index}`} className={classNames.label}>Expected Output (stdout)</Label>
+            <Textarea 
+              id={`expected-${index}`} 
+              name="expected_output" 
+              value={testCase.expected_output} 
+              onChange={(e) => handleTestCaseChange(index, e)} 
+              className={classNames.textarea} 
+              placeholder="Enter the exact expected output, including newlines."
+              required 
+            />
+            <button type="button" onClick={() => removeTestCase(index)} className="mt-2 ml-auto text-red-500 hover:text-red-400">
               <Trash2 size={16} />
             </button>
           </div>
         </div>
       ))}
-      <Button type="button" variant="outline" onClick={() => addTestCase(type)} className="border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white mt-2">
-        <PlusCircle size={16} className="mr-2" /> Add {type === 'sample' ? 'Sample' : 'Hidden'} Case
+      <Button type="button" variant="outline" onClick={addTestCase} className="border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white mt-2">
+        <PlusCircle size={16} className="mr-2" /> Add Test Case
       </Button>
     </div>
   );
@@ -141,6 +151,7 @@ const ProblemSubmissionForm = ({ onToast }) => {
       <div className="w-full max-w-4xl bg-gray-900/70 backdrop-blur-sm rounded-lg shadow-xl p-8 border border-gray-700 pixel-border">
         <h2 className="text-3xl font-pixel text-center mb-8 text-shadow-neon text-white">Submit Your Problem</h2>
         <form onSubmit={handleSubmit} className="space-y-8">
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <Label htmlFor="title" className={classNames.label}>Problem Title</Label>
@@ -154,18 +165,18 @@ const ProblemSubmissionForm = ({ onToast }) => {
             </div>
           </div>
           <div>
-            <Label htmlFor="description" className={classNames.label}>Description</Label>
-            <Textarea id="description" name="description" value={formData.description} onChange={handleChange} className={classNames.textarea + " h-32"} required />
+            <Label htmlFor="description" className={classNames.label}>Description (Supports Markdown)</Label>
+            <Textarea id="description" name="description" value={formData.description} onChange={handleChange} className={classNames.textarea + " h-32"} placeholder="Clearly explain the problem, input format, and output format." required />
           </div>
           <div>
-            <Label htmlFor="constraints" className={classNames.label}>Constraints</Label>
-            <Textarea id="constraints" name="constraints" value={formData.constraints} onChange={handleChange} className={classNames.textarea} />
+            <Label htmlFor="constraints" className={classNames.label}>Constraints (Supports Markdown)</Label>
+            <Textarea id="constraints" name="constraints" value={formData.constraints} onChange={handleChange} className={classNames.textarea} placeholder="e.g., 1 <= n <= 10^5" />
           </div>
           <div>
-            <Label htmlFor="tagInput" className={classNames.label}>Tags (Type and press Enter or Comma)</Label>
+            <Label htmlFor="tagInput" className={classNames.label}>Tags (Type and press Enter)</Label>
             <div className={`flex flex-wrap items-center gap-2 ${classNames.input} min-h-[40px] p-2`}>
-              {formData.tags.map((tag, index) => (
-                <span key={index} className="bg-blue-600 text-white px-2 py-1 rounded-md text-sm font-tech flex items-center">
+              {formData.tags.map((tag) => (
+                <span key={tag} className="bg-blue-600 text-white px-2 py-1 rounded-md text-sm font-tech flex items-center">
                   {tag}
                   <button type="button" onClick={() => removeTag(tag)} className="ml-1 text-white hover:text-gray-200 focus:outline-none">&times;</button>
                 </span>
@@ -175,8 +186,7 @@ const ProblemSubmissionForm = ({ onToast }) => {
           </div>
           
           <div className="space-y-8 pt-4 border-t border-gray-800">
-            <TestCaseInputs type="sample" title="Sample Test Cases" />
-            <TestCaseInputs type="hidden" title="Hidden Test Cases" />
+            <TestCaseInputs />
           </div>
 
           <Button type="submit" disabled={isLoading} className={classNames.button + " w-full"}>

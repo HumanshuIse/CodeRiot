@@ -5,8 +5,11 @@ import { useState, useEffect } from "react";
 import { Code, Trophy, Sword, Timer, Target, ArrowRight, Play, Star, Github, Zap, Users, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
+
 
 export default function Home({ onGetStarted }) {
+  const navigate = useNavigate();
   const [displayText, setDisplayText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -162,7 +165,7 @@ export default function Home({ onGetStarted }) {
 
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
             <Button
-              onClick={onGetStarted}
+              onClick = {()=>navigate('/matchmaking')}
               size="lg"
               className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-8 py-4 font-tech font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
             >

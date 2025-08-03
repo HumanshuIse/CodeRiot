@@ -1,7 +1,7 @@
 # app/routes/submission.py
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -23,21 +23,24 @@ async def create_submission(
 ):
     problem = db.query(Problem).filter(Problem.id == submission_data.problem_id).first()
     if not problem or not problem.test_cases:
-        raise HTTPException(status_code=404, detail="Problem or its test cases not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Problem or its test cases not found.")
 
-    # ✅ UPDATED: Combine sample and hidden test cases for final judging.
-    sample_cases = problem.test_cases.get('sample', [])
-    hidden_cases = problem.test_cases.get('hidden', [])
-    all_test_cases = sample_cases + hidden_cases
+    # --- FIX: Ensure all_test_cases is always a list of dictionaries ---
+    # The database might store test_cases as {'sample': [...]} or just [...].
+    # This handles both formats to prevent the AttributeError.
+    if isinstance(problem.test_cases, dict):
+        all_test_cases = problem.test_cases.get('sample', []) + problem.test_cases.get('hidden', [])
+    else:
+        all_test_cases = problem.test_cases
 
     if not all_test_cases:
-        raise HTTPException(status_code=404, detail="No test cases found for this problem.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No test cases found for this problem.")
 
     final_status = "Accepted"
     total_cases = len(all_test_cases)
-
-    # Loop through the combined list of all test cases
+    
     for i, case in enumerate(all_test_cases):
+        # The 'case' variable is now guaranteed to be a dictionary
         payload = {
             "code": submission_data.code,
             "language": submission_data.language,
@@ -54,14 +57,22 @@ async def create_submission(
             actual_output = result.get("output", "").strip().replace('\r\n', '\n')
             expected_output = case.get("expected_output", "").strip().replace('\r\n', '\n')
 
-            if result.get("exitCode") != 0 or result.get("error"):
-                final_status = f"Runtime Error on Test {i+1}"
+            if result.get("error"):
+                error_msg = result["error"]
+                if "Time Limit Exceeded" in error_msg:
+                    final_status = f"Time Limit Exceeded on Test {i+1}"
+                else:
+                    final_status = f"Runtime Error on Test {i+1}"
                 break
             if actual_output != expected_output:
                 final_status = f"Wrong Answer on Test {i+1}"
                 break
+        
         except httpx.TimeoutException:
             final_status = f"Time Limit Exceeded on Test {i+1}"
+            break
+        except httpx.RequestError:
+            final_status = f"Judge Communication Error on Test {i+1}"
             break
         except Exception:
             final_status = f"Judge Error on Test {i+1}"
@@ -70,7 +81,6 @@ async def create_submission(
     if final_status == "Accepted":
         final_status = f"Accepted ({total_cases}/{total_cases})"
 
-    # Save the final result to the database
     new_submission = Submission(
         user_id=current_user.id,
         problem_id=submission_data.problem_id,

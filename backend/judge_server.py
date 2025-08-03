@@ -1,160 +1,117 @@
 import docker
 import tempfile
 import os
-import time
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+import asyncio
 
-# Initialize FastAPI app
+# --- FastAPI and Docker Setup ---
 app = FastAPI()
-
-# Configure CORS to allow requests from your React app's origin
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, restrict this to your frontend's domain
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
 )
-
-# Initialize Docker client
 try:
     client = docker.from_env()
-    client.ping() # Check if Docker is running
+    client.ping()
     print("Docker client initialized successfully.")
 except Exception as e:
-    print(f"Error initializing Docker client: {e}")
-    print("Please ensure Docker is running and the user has permission to access the Docker daemon.")
+    print(f"FATAL: Error initializing Docker client: {e}")
     client = None
 
-# Pydantic model for the incoming request body
-class CodeSubmission(BaseModel):
-    code: str
-    language: str
-    input: str | None = ""
-
 # --- Language Configuration ---
-LANGUAGE_CONFIG = {
+# The commands are now simpler, focused on compiling and running a single file.
+LANGUAGE_META = {
     "python": {
         "image": "python:3.10-slim",
         "filename": "script.py",
-        "command": "python script.py" # Command as a single string
-    },
-    "javascript": {
-        "image": "node:18-slim",
-        "filename": "script.js",
-        "command": "node script.js"
+        "command": "python script.py < input.txt",
     },
     "cpp": {
         "image": "gcc:11",
         "filename": "main.cpp",
-        "command": "g++ main.cpp -o main && ./main"
-    },
-    "java": {
-        "image": "openjdk:17-slim",
-        "filename": "Main.java",
-        "command": "javac Main.java && java Main"
+        "command": "g++ -std=c++17 main.cpp -o main && ./main < input.txt",
     }
 }
 
-# The API endpoint to receive and execute code
-@app.post("/execute")
-async def execute_code(submission: CodeSubmission):
-    """
-    Receives code from the frontend, runs it in a secure Docker container
-    with standard input, and returns the output.
-    """
-    if not client:
-        raise HTTPException(status_code=500, detail="Docker client not available. Is Docker running?")
+# --- Pydantic Model for Incoming Data ---
+# Simplified to only include what the judge needs to execute.
+class CodeExecution(BaseModel):
+    code: str
+    language: str
+    input: str = ""
 
-    language = submission.language.lower()
-    if language not in LANGUAGE_CONFIG:
+@app.post("/execute")
+async def execute_code(execution: CodeExecution):
+    if not client:
+        raise HTTPException(status_code=503, detail="Docker client is not available.")
+
+    language = execution.language.lower()
+    if language not in LANGUAGE_META:
         raise HTTPException(status_code=400, detail=f"Language '{language}' is not supported.")
 
-    config = LANGUAGE_CONFIG[language]
-    
+    config = LANGUAGE_META[language]
+
+    # The user's code is now the full program.
+    full_code = execution.code
+
+    # 🪵 Log full code for debugging
+    print("\n--- FULL RECEIVED CODE ---")
+    print(full_code)
+    print("--- END OF CODE ---\n")
+
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Create the source code file path
         file_path = os.path.join(temp_dir, config["filename"])
-        with open(file_path, "w") as f:
-            f.write(submission.code)
-
-        # --- NEW: Write the input to a separate file ---
         input_file_path = os.path.join(temp_dir, "input.txt")
+
+        with open(file_path, "w") as f:
+            f.write(full_code)
+
         with open(input_file_path, "w") as f:
-            f.write(submission.input or "")
-
-        # --- NEW: Construct the final command with input redirection ---
-        # This safely pipes the content of input.txt into the program's stdin
-        final_command = f"{config['command']} < input.txt"
-
-        # Define container parameters
-        container_config = {
-            "image": config["image"],
-            # We use bash to handle the command with redirection
-            "command": ["/bin/bash", "-c", final_command],
-            "working_dir": "/app",
-            "volumes": {
-                temp_dir: {"bind": "/app", "mode": "rw"}
-            },
-            "detach": True,
-            "mem_limit": "256m",
-            "pids_limit": 100,
-            "network_disabled": True,
-        }
+            f.write(execution.input or "")
 
         container = None
         try:
-            start_time = time.time()
-            container = client.containers.run(**container_config)
-            
+            container = client.containers.run(
+                image=config["image"],
+                entrypoint="/bin/sh",
+                command=["-c", config["command"]],
+                working_dir="/app",
+                volumes={temp_dir: {"bind": "/app", "mode": "rw"}},
+                detach=True,
+                mem_limit="256m",
+                network_disabled=True,
+            )
+
             result = container.wait(timeout=10)
-            
-            end_time = time.time()
-            execution_time = round((end_time - start_time) * 1000)
+            stdout = container.logs(stdout=True, stderr=False).decode("utf-8", "ignore")
+            stderr = container.logs(stdout=False, stderr=True).decode("utf-8", "ignore")
 
-            stdout = container.logs(stdout=True, stderr=False).decode("utf-8", errors="ignore")
-            stderr = container.logs(stdout=False, stderr=True).decode("utf-8", errors="ignore")
-            
-            stats = container.stats(stream=False)
-            memory_usage_bytes = stats.get("memory_stats", {}).get("usage", 0)
-            memory_usage_mb = round(memory_usage_bytes / (1024 * 1024), 2) if memory_usage_bytes else 0
+            # 🪵 Log output
+            print(f"\n--- STDOUT ---\n{stdout}\n--- STDERR ---\n{stderr}\n--- Exit Code: {result['StatusCode']} ---\n")
 
-            exit_code = result.get("StatusCode", -1)
+            if result["StatusCode"] != 0:
+                return {
+                    "output": stdout,
+                    "error": stderr or f"Process exited with code {result['StatusCode']}. Possibly a compilation or runtime error."
+                }
 
-            return {
-                "output": stdout,
-                "error": stderr,
-                "exitCode": exit_code,
-                "executionTime": execution_time,
-                "memoryUsage": memory_usage_mb
-            }
+            return {"output": stdout, "error": stderr}
 
         except docker.errors.ContainerError as e:
-            return {
-                "output": "",
-                "error": str(e),
-                "exitCode": e.exit_status,
-                "executionTime": 0,
-                "memoryUsage": 0
-            }
+            return {"output": "", "error": e.stderr.decode("utf-8", "ignore")}
+
         except Exception as e:
-            if container:
-                try:
-                    container.stop()
-                except docker.errors.APIError:
-                    pass
-            
-            error_message = str(e)
-            if "Timeout" in str(e):
-                error_message = "Execution timed out. (10s limit)"
-            
-            raise HTTPException(status_code=500, detail=error_message)
-        
+            # Catch timeout from container.wait()
+            if isinstance(e, (asyncio.TimeoutError, docker.errors.ContainerError)) and "timeout" in str(e).lower():
+                 return {"output": "", "error": "Time Limit Exceeded"}
+            return {"output": "", "error": f"Judge server internal error: {str(e)}"}
+
+
         finally:
             if container:
                 try:
                     container.remove(force=True)
-                except docker.errors.APIError:
+                except Exception:
                     pass
