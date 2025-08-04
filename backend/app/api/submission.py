@@ -1,5 +1,5 @@
 # app/routes/submission.py
-
+import asyncio
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -10,6 +10,9 @@ from app.models.submission import Submission
 from app.models.user import User
 from app.core.security import get_current_user
 from app.schemas.submission import SubmissionIn, SubmissionOut
+# --- MODIFIED: Import the global connection manager ---
+from app.core.websockets import manager
+
 
 router = APIRouter()
 
@@ -25,9 +28,6 @@ async def create_submission(
     if not problem or not problem.test_cases:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Problem or its test cases not found.")
 
-    # --- FIX: Ensure all_test_cases is always a list of dictionaries ---
-    # The database might store test_cases as {'sample': [...]} or just [...].
-    # This handles both formats to prevent the AttributeError.
     if isinstance(problem.test_cases, dict):
         all_test_cases = problem.test_cases.get('sample', []) + problem.test_cases.get('hidden', [])
     else:
@@ -40,12 +40,7 @@ async def create_submission(
     total_cases = len(all_test_cases)
     
     for i, case in enumerate(all_test_cases):
-        # The 'case' variable is now guaranteed to be a dictionary
-        payload = {
-            "code": submission_data.code,
-            "language": submission_data.language,
-            "input": case.get("input", "")
-        }
+        payload = { "code": submission_data.code, "language": submission_data.language, "input": case.get("input", "") }
 
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
@@ -53,26 +48,20 @@ async def create_submission(
                 response.raise_for_status()
             
             result = response.json()
-            
             actual_output = result.get("output", "").strip().replace('\r\n', '\n')
             expected_output = case.get("expected_output", "").strip().replace('\r\n', '\n')
 
             if result.get("error"):
                 error_msg = result["error"]
+                final_status = f"Runtime Error on Test {i+1}"
                 if "Time Limit Exceeded" in error_msg:
                     final_status = f"Time Limit Exceeded on Test {i+1}"
-                else:
-                    final_status = f"Runtime Error on Test {i+1}"
                 break
             if actual_output != expected_output:
                 final_status = f"Wrong Answer on Test {i+1}"
                 break
-        
-        except httpx.TimeoutException:
+        except (httpx.TimeoutException, httpx.RequestError):
             final_status = f"Time Limit Exceeded on Test {i+1}"
-            break
-        except httpx.RequestError:
-            final_status = f"Judge Communication Error on Test {i+1}"
             break
         except Exception:
             final_status = f"Judge Error on Test {i+1}"
@@ -92,5 +81,16 @@ async def create_submission(
     db.add(new_submission)
     db.commit()
     db.refresh(new_submission)
+
+    # --- MODIFIED: Notify opponent on successful submission ---
+    if final_status.startswith("Accepted") and submission_data.opponent_id:
+        notification = {
+            "status": "opponent_finished",
+            "detail": "Your opponent has solved the problem! ⚔️"
+        }
+        # Use asyncio.create_task to send notification without blocking the response
+        asyncio.create_task(
+            manager.send_personal_message(notification, submission_data.opponent_id)
+        )
 
     return new_submission

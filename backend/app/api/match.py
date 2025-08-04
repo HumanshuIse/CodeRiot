@@ -2,47 +2,56 @@
 import asyncio
 import redis
 import uuid
-import json
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import func
 
 from app.db.database import get_db
 from app.models.problem import Problem
+from app.models.user import User # Import User model
 from app.schemas.problems import ProblemOut
-
-# --- WebSocket Connection Manager ---
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: dict[int, WebSocket] = {}
-
-    async def connect(self, websocket: WebSocket, user_id: int):
-        await websocket.accept()
-        self.active_connections[user_id] = websocket
-
-    def disconnect(self, user_id: int):
-        if user_id in self.active_connections:
-            del self.active_connections[user_id]
-
-    async def send_personal_message(self, message: dict, user_id: int):
-        if user_id in self.active_connections:
-            websocket = self.active_connections[user_id]
-            await websocket.send_json(message)
-
-manager = ConnectionManager()
+from app.core.websockets import manager
+# --- NEW: Import security functions to validate the token ---
+from app.core.security import ALGORITHM, SECRET_KEY
+from jose import jwt, JWTError
 
 
-# --- Redis Connection ---
+# --- Connection and Redis setup... (no changes here) ---
 REDIS_HOST = "localhost"
 REDIS_PORT = 6379
 redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
-
 MATCHMAKING_QUEUE_KEY = "matchmaking:queue"
-
-# --- FastAPI Router ---
 router = APIRouter()
 
-# --- Helper Functions ---
+
+# --- NEW: Dependency function to authenticate WebSocket connections ---
+async def get_user_from_token_ws(
+    token: str = Query(...), 
+    db: Session = Depends(get_db)
+) -> User:
+    """
+    Decodes the JWT token from a query parameter to authenticate a WebSocket user.
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: int = payload.get("user_id")
+        if user_id is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
+
+# --- Helper Functions (no changes here) ---
 def get_random_approved_problem(db: Session) -> Problem:
     random_problem = db.query(Problem).filter(Problem.status == 'approved').order_by(func.random()).first()
     if not random_problem:
@@ -112,9 +121,16 @@ async def attempt_to_create_match(db: Session):
             return
 
 
-# --- WebSocket Endpoint ---
-@router.websocket("/ws/matchmaking/{user_id}")
-async def matchmaking_websocket(websocket: WebSocket, user_id: int, db: Session = Depends(get_db)):
+# --- MODIFIED: WebSocket Endpoint with Authentication ---
+@router.websocket("/ws/matchmaking")
+async def matchmaking_websocket(
+    websocket: WebSocket, 
+    # The new dependency will handle authentication
+    current_user: User = Depends(get_user_from_token_ws),
+    db: Session = Depends(get_db)
+):
+    # The 'user_id' from the path is gone, we use the authenticated 'current_user.id'
+    user_id = current_user.id
     await manager.connect(websocket, user_id)
     
     try:
@@ -123,6 +139,7 @@ async def matchmaking_websocket(websocket: WebSocket, user_id: int, db: Session 
         await attempt_to_create_match(db)
         
         while True:
+            # Keep the connection alive
             await websocket.receive_text()
 
     except WebSocketDisconnect:

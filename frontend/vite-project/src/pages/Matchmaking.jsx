@@ -39,7 +39,8 @@ const Matchmaking = ({ userId, username, onToast, onMatchFound }) => { // Remove
 
     useEffect(() => {
         if (status === 'searching' && !socketRef.current) {
-            const newSocket = new WebSocket(`ws://localhost:8000/api/match/ws/matchmaking/${userId}`);
+            const token = localStorage.getItem('token');
+            const newSocket = new WebSocket(`ws://localhost:8000/api/match/ws/matchmaking?token=${token}`);
             socketRef.current = newSocket;
 
             newSocket.onopen = () => {

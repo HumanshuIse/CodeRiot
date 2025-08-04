@@ -9,6 +9,7 @@ class SubmissionIn(BaseModel):
     language: str
     code: str
     match_id: Optional[str] = None
+    opponent_id: int | None = None # Add this field
 
 class SubmissionOut(BaseModel):
     """Schema for returning the result of a submission."""

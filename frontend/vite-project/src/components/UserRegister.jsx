@@ -42,6 +42,7 @@ const UserRegister = ({ onToast, onLoginSuccess }) => {
       });
       
       if (response.status === 200 && response.data.access_token) {
+        localStorage.setItem('token', response.data.access_token);
         onLoginSuccess(response.data.access_token, navigate); // Pass navigate to onLoginSuccess
       }
     } catch (error) {

@@ -3,6 +3,8 @@ import axios from 'axios';
 import Split from 'react-split';
 import { Play, Pause, UploadCloud, Loader, CheckCircle2, XCircle, FileText, BarChart2 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
+// You may need to install this library: npm install jwt-decode
+import { jwtDecode } from 'jwt-decode';
 
 const GutterStyle = () => (
     <style>{`
@@ -13,7 +15,26 @@ const GutterStyle = () => (
     `}</style>
 );
 
-const CodeEditor = ({ problem, match }) => {
+// Helper function to get user ID from token
+const getUserIdFromToken = () => {
+  const token = localStorage.getItem('token');
+  if (!token) return null;
+  try {
+    // IMPORTANT: Adjust 'user_id' to match the key in your JWT payload
+    const decoded = jwtDecode(token);
+    return decoded.user_id; 
+  } catch (error) {
+    console.error("Failed to decode token:", error);
+    return null;
+  }
+};
+
+const CodeEditor = () => {
+  // Component now manages its own state received via WebSocket
+  const [problem, setProblem] = useState(null);
+  const [match, setMatch] = useState(null);
+  
+  // Existing state declarations
   const [code, setCode] = useState('');
   const [language, setLanguage] = useState('cpp');
   const [activeTestCaseIndex, setActiveTestCaseIndex] = useState(0);
@@ -24,10 +45,71 @@ const CodeEditor = ({ problem, match }) => {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [activeTab, setActiveTab] = useState('testcases');
   const [submissionResult, setSubmissionResult] = useState(null);
+  const [opponentNotification, setOpponentNotification] = useState('');
+  const [statusMessage, setStatusMessage] = useState('Initializing...');
 
   const JUDGE_SERVER_URL = 'http://localhost:8001/execute';
   const SUBMISSION_API_URL = 'http://localhost:8000/api/submission';
 
+  // WebSocket connection and message handling logic
+   useEffect(() => {
+    // --- CHANGE IS HERE ---
+    // First, get the token from localStorage
+    const token = localStorage.getItem('token'); 
+    
+    if (!token) {
+      // If no token, we can't authenticate.
+      setStatusMessage("Error: Not authenticated. Please log in.");
+      return;
+    }
+    
+    // The user ID is no longer needed in the path.
+    // Instead, we append the token as a query parameter.
+    const ws = new WebSocket(`ws://localhost:8000/api/match/ws/matchmaking?token=${token}`);
+
+    ws.onopen = () => {
+      console.log("WebSocket connection established.");
+      setStatusMessage("Searching for an opponent...");
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      switch(data.status) {
+        case 'waiting':
+            setStatusMessage("Waiting in queue...");
+            break;
+        case 'matched':
+          setProblem(data.problem);
+          setMatch({ match_id: data.match_id, opponent_id: data.opponent_id });
+          setIsTimerRunning(true);
+          break;
+        case 'opponent_finished':
+          setOpponentNotification(data.detail);
+          break;
+        case 'error':
+          setStatusMessage(`Error: ${data.detail}`);
+          break;
+        default:
+          console.log("Received unhandled message:", data);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      setStatusMessage("Connection error. Please refresh the page.");
+    };
+
+    ws.onclose = () => {
+      console.log("WebSocket connection closed.");
+      if (isTimerRunning) setIsTimerRunning(false);
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []); // Empty array ensures this runs only once
+
+  // Timer logic
   useEffect(() => {
     let timerId = null;
     if (isTimerRunning) {
@@ -36,6 +118,27 @@ const CodeEditor = ({ problem, match }) => {
     return () => clearInterval(timerId);
   }, [isTimerRunning]);
 
+  // Logic to update editor when a new problem arrives
+  useEffect(() => {
+    if (problem) {
+      const templateKey = `frontend_template_${language}`;
+      const template = problem[templateKey];
+      setCode(template || `// Starter code for ${language} is not available.`);
+      setTestCaseOutputs({});
+      setActiveTestCaseIndex(0);
+      setSubmissionResult(null);
+      setActiveTab('testcases');
+      setOpponentNotification('');
+    }
+  }, [problem, language]);
+
+  //use effect for opponent notification
+  useEffect(()=>{
+    setTimeout(()=>{
+      setOpponentNotification('');
+    },6000) // clear after 6 secs.
+  },[opponentNotification])
+
   const formatTime = (totalSeconds) => {
     const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
     const seconds = String(totalSeconds % 60).padStart(2, '0');
@@ -43,21 +146,7 @@ const CodeEditor = ({ problem, match }) => {
   };
 
   const handleTimerToggle = () => setIsTimerRunning(prev => !prev);
-
-  useEffect(() => {
-    if (problem) {
-      const templateKey = `frontend_template_${language}`;
-      const template = problem[templateKey];
-
-      setCode(template || `// Starter code for ${language} is not available for this problem.`);
-      setTestCaseOutputs({});
-      setActiveTestCaseIndex(0);
-      setSubmissionResult(null);
-      setActiveTab('testcases');
-    }
-  }, [problem, language]);
-
-  // MODIFIED: This now works with the simplified test_cases array.
+  
   const testCases = problem?.test_cases || [];
 
   const handleRunCode = async () => {
@@ -71,9 +160,7 @@ const CodeEditor = ({ problem, match }) => {
 
     try {
       const response = await axios.post(JUDGE_SERVER_URL, {
-        language,
-        code,
-        input: currentCase.input,
+        language, code, input: currentCase.input,
       });
       const output = response.data.error || response.data.output;
       setTestCaseOutputs(prev => ({ ...prev, [activeTestCaseIndex]: { output, expected: currentCase.expected_output } }));
@@ -93,7 +180,11 @@ const CodeEditor = ({ problem, match }) => {
     try {
         const token = localStorage.getItem('token');
         const response = await axios.post(SUBMISSION_API_URL, {
-            problem_id: problem.id, language, code, match_id: match?.match_id
+            problem_id: problem.id,
+            language,
+            code,
+            match_id: match?.match_id,
+            opponent_id: match?.opponent_id
         }, { headers: { 'Authorization': `Bearer ${token}` } });
         setSubmissionResult(response.data.status); 
     } catch (error) {
@@ -103,7 +194,7 @@ const CodeEditor = ({ problem, match }) => {
         setIsSubmitting(false);
     }
   };
-
+  
   const getStatusColorClass = (status) => {
     if (!status) return 'text-gray-400';
     if (status.startsWith('Accepted')) return 'text-green-500';
@@ -112,16 +203,21 @@ const CodeEditor = ({ problem, match }) => {
     return 'text-gray-400';
   };
 
-  if (!problem) {
+  if (!problem || !match) {
     return (
       <div className="h-screen bg-black flex items-center justify-center text-white font-pixel">
-        <Loader className="w-8 h-8 animate-spin mr-4" /> Waiting for a match...
+        <Loader className="w-8 h-8 animate-spin mr-4" /> {statusMessage}
       </div>
     );
   }
 
   return (
     <div className="h-screen bg-black text-white p-2 font-tech">
+      {opponentNotification && (
+        <div className="absolute top-4 right-4 bg-blue-500 text-white p-3 rounded-lg shadow-lg z-50 animate-pulse">
+          <p>📣 {opponentNotification}</p>
+        </div>
+      )}
       <GutterStyle />
       <Split className="flex h-full" sizes={[50, 50]} minSize={400} gutterSize={8}>
         <div className="bg-gray-900 rounded-lg border border-gray-800 flex flex-col overflow-y-auto">
@@ -140,9 +236,9 @@ const CodeEditor = ({ problem, match }) => {
               </div>
           </div>
         </div>
-
+        
         <div className="bg-gray-900 rounded-lg border border-gray-800 flex flex-col">
-          <div className="bg-gray-800 p-2 flex justify-between items-center flex-shrink-0">
+            <div className="bg-gray-800 p-2 flex justify-between items-center flex-shrink-0">
             <div className="flex items-center gap-4">
               <select value={language} onChange={(e) => setLanguage(e.target.value)} className="bg-gray-700 text-white px-3 py-1 rounded text-sm border border-gray-600">
                 <option value="cpp">C++</option>
@@ -204,7 +300,7 @@ const CodeEditor = ({ problem, match }) => {
                   )}
 
                   {activeTab === 'submission' && (
-                    <div className="p-4 text-center">
+                     <div className="p-4 text-center">
                       {isSubmitting ? (
                         <div className="flex flex-col items-center justify-center h-full">
                           <Loader className="w-8 h-8 animate-spin text-blue-400" />
@@ -240,6 +336,7 @@ const CodeEditor = ({ problem, match }) => {
             </button>
           </div>
         </div>
+
       </Split>
     </div>
   );

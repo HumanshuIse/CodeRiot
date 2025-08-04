@@ -21,8 +21,8 @@ def register(user: UserIn, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    token = create_access_token({"sub": new_user.username})
-
+    token_data = {"user_id": new_user.id, "sub": new_user.username}
+    token = create_access_token(token_data)
     return {
         "access_token": token,
         "token_type": "bearer"
@@ -34,7 +34,7 @@ def login(user: Userlogin, db: Session = Depends(get_db)):
     if not db_user or not verify_password(user.password, db_user.password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
-    token = create_access_token({"sub": db_user.username})
+    token = create_access_token({"user_id":db_user.id,"sub": db_user.username})
     return {"access_token": token, "token_type": "bearer"}
 
 @router.get("/profile", response_model=UserOut) # Use the new UserOut schema
@@ -56,6 +56,6 @@ def login_with_form(form_data: OAuth2PasswordRequestForm = Depends(), db: Sessio
     if not db_user or not verify_password(form_data.password, db_user.password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
-    token = create_access_token({"sub": db_user.username})
+    token = create_access_token({"user_id":db_user.id,"sub": db_user.username})
     return {"access_token": token, "token_type": "bearer"}
 
