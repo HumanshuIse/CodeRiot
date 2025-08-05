@@ -5,33 +5,29 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import func
+from pydantic import BaseModel
 
 from app.db.database import get_db
 from app.models.problem import Problem
-from app.models.user import User # Import User model
+from app.models.user import User
 from app.schemas.problems import ProblemOut
 from app.core.websockets import manager
-# --- NEW: Import security functions to validate the token ---
-from app.core.security import ALGORITHM, SECRET_KEY
+from app.core.security import get_current_user, ALGORITHM, SECRET_KEY
 from jose import jwt, JWTError
 
-
-# --- Connection and Redis setup... (no changes here) ---
 REDIS_HOST = "localhost"
 REDIS_PORT = 6379
 redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
 MATCHMAKING_QUEUE_KEY = "matchmaking:queue"
 router = APIRouter()
 
+class QuitMatchRequest(BaseModel):
+    match_id: str
 
-# --- NEW: Dependency function to authenticate WebSocket connections ---
 async def get_user_from_token_ws(
     token: str = Query(...), 
     db: Session = Depends(get_db)
 ) -> User:
-    """
-    Decodes the JWT token from a query parameter to authenticate a WebSocket user.
-    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -50,8 +46,6 @@ async def get_user_from_token_ws(
         raise credentials_exception
     return user
 
-
-# --- Helper Functions (no changes here) ---
 def get_random_approved_problem(db: Session) -> Problem:
     random_problem = db.query(Problem).filter(Problem.status == 'approved').order_by(func.random()).first()
     if not random_problem:
@@ -60,10 +54,6 @@ def get_random_approved_problem(db: Session) -> Problem:
     return random_problem
 
 async def attempt_to_create_match(db: Session):
-    """
-    The core matchmaking logic. It now transforms the test case data structure
-    to match the updated Pydantic schema before sending it.
-    """
     with redis_client.pipeline() as pipe:
         try:
             pipe.watch(MATCHMAKING_QUEUE_KEY)
@@ -86,7 +76,6 @@ async def attempt_to_create_match(db: Session):
 
             problem = get_random_approved_problem(db)
             if not problem:
-                # Handle case where no problems are available
                 redis_client.lpush(MATCHMAKING_QUEUE_KEY, player1_id, player2_id)
                 error_msg = {"status": "error", "detail": "Matchmaking is temporarily unavailable."}
                 await manager.send_personal_message(error_msg, player1_id)
@@ -94,17 +83,13 @@ async def attempt_to_create_match(db: Session):
                 return
 
             match_id = str(uuid.uuid4())
+            match_key = f"match:{match_id}"
+            redis_client.hmset(match_key, {"player1": player1_id, "player2": player2_id})
+            redis_client.expire(match_key, 7200) # Expire after 2 hours
             
-            # --- FIX DATA STRUCTURE MISMATCH ---
-            # The database might store test_cases as {'sample': [...]}.
-            # The ProblemOut schema now expects a simple list [...].
-            # This check converts the old format to the new one before validation.
             if isinstance(problem.test_cases, dict):
-                # For the coding challenge, we only send the sample cases.
-                # The full set is used only during final submission.
                 problem.test_cases = problem.test_cases.get('sample', [])
 
-            # Prepare match details for each player
             def create_match_payload(p1, p2):
                 return {
                     "status": "matched",
@@ -113,36 +98,71 @@ async def attempt_to_create_match(db: Session):
                     "opponent_id": p2
                 }
 
-            # Notify both players with the match details
             await manager.send_personal_message(create_match_payload(player1_id, player2_id), player1_id)
             await manager.send_personal_message(create_match_payload(player2_id, player1_id), player2_id)
 
         except redis.exceptions.WatchError:
             return
 
-
-# --- MODIFIED: WebSocket Endpoint with Authentication ---
 @router.websocket("/ws/matchmaking")
 async def matchmaking_websocket(
     websocket: WebSocket, 
-    # The new dependency will handle authentication
     current_user: User = Depends(get_user_from_token_ws),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    match_id: str | None = Query(None)
 ):
-    # The 'user_id' from the path is gone, we use the authenticated 'current_user.id'
     user_id = current_user.id
     await manager.connect(websocket, user_id)
     
     try:
-        redis_client.lpush(MATCHMAKING_QUEUE_KEY, user_id)
-        await manager.send_personal_message({"status": "waiting"}, user_id)
-        await attempt_to_create_match(db)
+        if match_id:
+            match_key = f"match:{match_id}"
+            match_data = redis_client.hgetall(match_key)
+            
+            if not match_data:
+                await manager.send_personal_message({"status": "error", "detail": "Match not found or has expired."}, user_id)
+                manager.disconnect(user_id)
+                return
+
+            player1_id = int(match_data['player1'])
+            player2_id = int(match_data['player2'])
+
+            if user_id not in [player1_id, player2_id]:
+                await manager.send_personal_message({"status": "error", "detail": "You are not part of this match."}, user_id)
+                manager.disconnect(user_id)
+                return
+
+            opponent_id = player2_id if user_id == player1_id else player1_id
+            await manager.send_personal_message({"status": "opponent_reconnected"}, opponent_id)
+        else:
+            redis_client.lpush(MATCHMAKING_QUEUE_KEY, user_id)
+            await manager.send_personal_message({"status": "waiting"}, user_id)
+            await attempt_to_create_match(db)
         
         while True:
-            # Keep the connection alive
             await websocket.receive_text()
 
     except WebSocketDisconnect:
         redis_client.lrem(MATCHMAKING_QUEUE_KEY, 0, user_id)
         manager.disconnect(user_id)
         print(f"User {user_id} disconnected and was removed from queue.")
+
+@router.post("/quit", status_code=status.HTTP_200_OK)
+async def quit_match(request: QuitMatchRequest, current_user: User = Depends(get_current_user)):
+    match_key = f"match:{request.match_id}"
+    match_data = redis_client.hgetall(match_key)
+
+    if not match_data:
+        raise HTTPException(status_code=404, detail="Match not found.")
+
+    player1_id, player2_id = int(match_data.get('player1', 0)), int(match_data.get('player2', 0))
+
+    if current_user.id not in [player1_id, player2_id]:
+        raise HTTPException(status_code=403, detail="You are not a participant in this match.")
+
+    opponent_id = player2_id if current_user.id == player1_id else player1_id
+    if manager.is_active(opponent_id):
+        await manager.send_personal_message({"status": "opponent_quit", "detail": "Your opponent has left the match."}, opponent_id)
+
+    redis_client.delete(match_key)
+    return {"status": "success", "detail": "Match has been quit."}

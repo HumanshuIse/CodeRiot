@@ -22,6 +22,9 @@ class ConnectionManager:
         if user_id in self.active_connections:
             websocket = self.active_connections[user_id]
             await websocket.send_json(message)
+    def is_active(self,user_id:int) -> bool:
+        """checks if user is active and connected"""
+        return user_id in self.active_connections
 
 # Create a global instance of the ConnectionManager
 manager = ConnectionManager()

@@ -1,7 +1,7 @@
 // src/App.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'; // Import router components and hook
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 
 // Import Components
 import Navbar from './components/Navbar';
@@ -12,22 +12,19 @@ import CodeEditor from './components/CodeEditor';
 import ProblemSubmissionForm from './components/ProblemSubmissionForm';
 
 // Import Pages
-import Home from './pages/Home'; // Corrected import
+import Home from './pages/Home';
 import UserProfile from './pages/UserProfile';
 import Matchmaking from './pages/Matchmaking';
 
-// Main App component wrapped with BrowserRouter for routing
 const App = () => {
-  const [authTab, setAuthTab] = useState('login');
   const [toastInfo, setToastInfo] = useState(null);
-  
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState('');
   const [userId, setUserId] = useState(null);
 
-  const [currentMatch, setCurrentMatch] = useState(null);
+  // Removed currentMatch state as CodeEditor now reliably uses localStorage
+  // which is better for reload persistence.
 
-  // useCallback for stable prop functions to prevent unnecessary re-renders in children
   const showToast = useCallback((message, type) => {
     setToastInfo({ message, type });
   }, []);
@@ -36,7 +33,19 @@ const App = () => {
     setToastInfo(null);
   };
 
-  const fetchUserProfile = useCallback(async (token) => {
+  const handleLogout = useCallback((navigate) => {
+    setIsLoggedIn(false);
+    setUsername('');
+    setUserId(null);
+    localStorage.removeItem('token');
+    // **MODIFIED**: Also clear any active match data on logout.
+    localStorage.removeItem('activeMatch');
+    localStorage.removeItem('matchTime');
+    navigate('/');
+    showToast('Logged out successfully', 'success');
+  }, [showToast]);
+
+  const fetchUserProfile = useCallback(async (token, navigate) => {
     try {
       const response = await axios.get('http://localhost:8000/api/auth/profile', {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -47,49 +56,47 @@ const App = () => {
       return response.data;
     } catch (error) {
       console.error("Failed to fetch user profile:", error);
-      localStorage.removeItem('token');
-      setIsLoggedIn(false);
-      setUsername('');
-      setUserId(null);
-      showToast("Your session expired. Please log in again.", "error");
+      // **MODIFIED**: If the token is invalid/expired, log the user out completely.
+      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+        showToast("Your session expired. Please log in again.", "error");
+        handleLogout(navigate); // Pass navigate to handleLogout
+      }
       throw error;
     }
-  }, [showToast]);
+  }, [showToast, handleLogout]);
 
-  // handleLogin now receives navigate from the component where it's called
-  const handleLogin = useCallback(async (token, navigate) => { // Added navigate as a parameter
+  const handleLogin = useCallback(async (token, navigate) => {
     localStorage.setItem('token', token);
     try {
-      await fetchUserProfile(token);
-      navigate('/profile'); // Use navigate to go to profile page
+      await fetchUserProfile(token, navigate);
+      navigate('/profile');
       showToast('Login successful!', 'success');
     } catch (error) {
       // Error is handled in fetchUserProfile
     }
   }, [fetchUserProfile, showToast]);
 
-  const handleLogout = useCallback((navigate) => { // Added navigate as a parameter
-    setIsLoggedIn(false);
-    setUsername('');
-    setUserId(null);
-    setCurrentMatch(null);
-    localStorage.removeItem('token');
-    navigate('/'); // Use navigate to go to home page
-    showToast('Logged out successfully', 'success');
-  }, [showToast]);
 
-  const handleMatchFound = useCallback((matchData, navigate) => { // Added navigate as a parameter
-    setCurrentMatch(matchData);
-    navigate('/editor'); // Use navigate to go to editor page
+  // **MODIFIED**: Centralized match data persistence here.
+  // This function is now the single source of truth for starting a match session.
+  const handleMatchFound = useCallback((matchData, navigate) => {
+    // Set the active match details and timer in localStorage *before* navigating.
+    // This ensures that even if the app is slow, the data is there when CodeEditor mounts.
+    localStorage.setItem('activeMatch', JSON.stringify(matchData));
+    localStorage.setItem('matchTime', '0'); // Reset timer for the new match
+    navigate('/editor');
   }, []);
-  
-  // Effect to check for existing token on app load
+
   useEffect(() => {
     const token = localStorage.getItem('token');
+    // This is a placeholder navigate function for the initial check.
+    // In a real app, you might want to handle this differently, but it works for now.
+    const pseudoNavigate = (path) => window.location.pathname = path;
     if (token) {
-      fetchUserProfile(token).catch(() => {});
+      fetchUserProfile(token, pseudoNavigate).catch(() => {});
     }
   }, [fetchUserProfile]);
+
 
   return (
     <BrowserRouter>
@@ -101,17 +108,13 @@ const App = () => {
         handleLogout={handleLogout}
         handleLogin={handleLogin}
         userId={userId}
-        currentMatch={currentMatch}
         handleMatchFound={handleMatchFound}
-        authTab={authTab}
-        setAuthTab={setAuthTab}
         showToast={showToast}
       />
     </BrowserRouter>
   );
 };
 
-// A wrapper component to use useNavigate within the BrowserRouter context
 const AppContent = ({
   toastInfo,
   hideToast,
@@ -120,18 +123,15 @@ const AppContent = ({
   handleLogout,
   handleLogin,
   userId,
-  currentMatch,
   handleMatchFound,
-  authTab,
-  setAuthTab,
   showToast,
 }) => {
-  const navigate = useNavigate(); // Initialize useNavigate
+  const navigate = useNavigate();
+  const [authTab, setAuthTab] = useState('login');
 
-  // Function to handle "Get Started" button click on Home page
   const handleGetStarted = useCallback(() => {
-    navigate('/auth'); // Navigate to the auth route
-    setAuthTab('login'); // Set default tab to login
+    navigate('/auth');
+    setAuthTab('login');
   }, [navigate, setAuthTab]);
 
   return (
@@ -148,9 +148,10 @@ const AppContent = ({
       />
       <Routes>
         <Route path="/" element={<Home onGetStarted={handleGetStarted} />} />
+        {/* **MODIFIED**: CodeEditor no longer needs props, it's self-sufficient with localStorage. */}
         <Route path="/editor" element={
           isLoggedIn ? (
-            <CodeEditor problem={currentMatch?.problem} match={currentMatch} />
+            <CodeEditor onToast={showToast} />
           ) : (
             <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
           )
@@ -189,25 +190,26 @@ const AppContent = ({
   );
 };
 
-// Reusable AuthPage component
 const AuthPage = ({ authTab, setAuthTab, onLoginSuccess, showToast }) => (
-  <div className="min-h-screen bg-black flex items-center justify-center py-8">
-    <div className="w-full max-w-md px-4">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-pixel text-white">CodeRiot</h1>
-      </div>
-      <div className="bg-gray-900/70 backdrop-blur-sm rounded-lg shadow-xl border border-gray-700 pixel-border">
-        <div className="flex border-b border-gray-700">
-          <button onClick={() => setAuthTab('login')} className={`flex-1 py-4 font-tech ${ authTab === 'login' ? 'bg-gray-800 text-white' : 'text-gray-400' }`}>Login</button>
-          <button onClick={() => setAuthTab('register')} className={`flex-1 py-4 font-tech ${ authTab === 'register' ? 'bg-gray-800 text-white' : 'text-gray-400' }`}>Register</button>
+    // ... No changes to this component
+    <div className="min-h-screen bg-black flex items-center justify-center py-8">
+        <div className="w-full max-w-md px-4">
+            <div className="text-center mb-8">
+                <h1 className="text-4xl font-pixel text-white">CodeRiot</h1>
+            </div>
+            <div className="bg-gray-900/70 backdrop-blur-sm rounded-lg shadow-xl border border-gray-700 pixel-border">
+                <div className="flex border-b border-gray-700">
+                    <button onClick={() => setAuthTab('login')} className={`flex-1 py-4 font-tech ${ authTab === 'login' ? 'bg-gray-800 text-white' : 'text-gray-400' }`}>Login</button>
+                    <button onClick={() => setAuthTab('register')} className={`flex-1 py-4 font-tech ${ authTab === 'register' ? 'bg-gray-800 text-white' : 'text-gray-400' }`}>Register</button>
+                </div>
+                <div className="p-8">
+                    {authTab === 'login' && <UserLogin onToast={showToast} onLoginSuccess={onLoginSuccess} />}
+                    {authTab === 'register' && <UserRegister onToast={showToast} onLoginSuccess={onLoginSuccess} />}
+                </div>
+            </div>
         </div>
-        <div className="p-8">
-          {authTab === 'login' && <UserLogin onToast={showToast} onLoginSuccess={onLoginSuccess} />}
-          {authTab === 'register' && <UserRegister onToast={showToast} onLoginSuccess={onLoginSuccess} />}
-        </div>
-      </div>
     </div>
-  </div>
 );
+
 
 export default App;

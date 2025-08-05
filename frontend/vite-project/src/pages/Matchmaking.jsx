@@ -2,9 +2,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { Users, Swords, XCircle, Loader, Shield, Zap } from 'lucide-react';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { useNavigate } from 'react-router-dom';
 
-// PlayerCard component remains the same...
 const PlayerCard = ({ username, isOpponent = false }) => (
     <div className="bg-gray-900/50 pixel-border p-6 text-center w-64 h-48 flex flex-col justify-center items-center animate-glow-slow border-cyan-500/50">
         <div className={`w-16 h-16 mb-4 flex items-center justify-center pixel-border ${isOpponent ? 'bg-red-500/20 border-red-500' : 'bg-blue-500/20 border-blue-500'}`}>
@@ -15,15 +14,14 @@ const PlayerCard = ({ username, isOpponent = false }) => (
     </div>
 );
 
-
-const Matchmaking = ({ userId, username, onToast, onMatchFound }) => { // Removed setActiveTab
-    const [status, setStatus] = useState('idle'); // idle, searching, matched, error
+const Matchmaking = ({ userId, username, onToast, onMatchFound }) => {
+    const [status, setStatus] = useState('idle');
     const [matchDetails, setMatchDetails] = useState(null);
     const [opponentUsername, setOpponentUsername] = useState('Opponent');
     const [countdown, setCountdown] = useState(5);
     
     const socketRef = useRef(null);
-    const navigate = useNavigate(); // Initialize useNavigate
+    const navigate = useNavigate();
 
     const fetchOpponentUsername = useCallback(async (opponentId) => {
         try {
@@ -93,7 +91,7 @@ const Matchmaking = ({ userId, username, onToast, onMatchFound }) => { // Remove
         if (status === 'matched' && countdown > 0) {
             timerId = setTimeout(() => setCountdown(countdown - 1), 1000);
         } else if (status === 'matched' && countdown === 0) {
-            onMatchFound(matchDetails, navigate); // Pass navigate to onMatchFound
+            onMatchFound(matchDetails, navigate);
         }
         return () => clearTimeout(timerId);
     }, [status, countdown, matchDetails, onMatchFound, navigate]);
@@ -103,6 +101,9 @@ const Matchmaking = ({ userId, username, onToast, onMatchFound }) => { // Remove
             onToast('Still connecting to user session.', 'error');
             return;
         }
+        // ** ADDED **: Clear any old match data before searching for a new one.
+        localStorage.removeItem('activeMatch');
+        localStorage.removeItem('matchTime');
         setStatus('searching');
     };
 

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+// src/components/CodeEditor.jsx
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Split from 'react-split';
-import { Play, Pause, UploadCloud, Loader, CheckCircle2, XCircle, FileText, BarChart2 } from 'lucide-react';
+import { Play, Pause, UploadCloud, Loader, CheckCircle2, XCircle, FileText, BarChart2, LogOut } from 'lucide-react';
 import Editor from '@monaco-editor/react';
-// You may need to install this library: npm install jwt-decode
-import { jwtDecode } from 'jwt-decode';
+import { useNavigate } from 'react-router-dom';
 
 const GutterStyle = () => (
     <style>{`
@@ -15,26 +15,11 @@ const GutterStyle = () => (
     `}</style>
 );
 
-// Helper function to get user ID from token
-const getUserIdFromToken = () => {
-  const token = localStorage.getItem('token');
-  if (!token) return null;
-  try {
-    // IMPORTANT: Adjust 'user_id' to match the key in your JWT payload
-    const decoded = jwtDecode(token);
-    return decoded.user_id; 
-  } catch (error) {
-    console.error("Failed to decode token:", error);
-    return null;
-  }
-};
-
-const CodeEditor = () => {
-  // Component now manages its own state received via WebSocket
+const CodeEditor = ({ onToast }) => { // **MODIFIED**: Receive onToast for notifications
   const [problem, setProblem] = useState(null);
   const [match, setMatch] = useState(null);
+  const navigate = useNavigate();
   
-  // Existing state declarations
   const [code, setCode] = useState('');
   const [language, setLanguage] = useState('cpp');
   const [activeTestCaseIndex, setActiveTestCaseIndex] = useState(0);
@@ -46,79 +31,118 @@ const CodeEditor = () => {
   const [activeTab, setActiveTab] = useState('testcases');
   const [submissionResult, setSubmissionResult] = useState(null);
   const [opponentNotification, setOpponentNotification] = useState('');
-  const [statusMessage, setStatusMessage] = useState('Initializing...');
+  const [statusMessage, setStatusMessage] = useState('Initializing match...');
 
   const JUDGE_SERVER_URL = 'http://localhost:8001/execute';
   const SUBMISSION_API_URL = 'http://localhost:8000/api/submission';
+  const wsRef = useRef(null);
 
-  // WebSocket connection and message handling logic
-   useEffect(() => {
-    // --- CHANGE IS HERE ---
-    // First, get the token from localStorage
-    const token = localStorage.getItem('token'); 
-    
-    if (!token) {
-      // If no token, we can't authenticate.
-      setStatusMessage("Error: Not authenticated. Please log in.");
+  // **MODIFIED**: Major refactor of the main effect hook for robustness and clarity.
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const activeMatch = JSON.parse(localStorage.getItem('activeMatch'));
+
+    // **SECURITY/ROBUSTNESS**: If there's no active match, the user shouldn't be on this page.
+    // Redirect them to find a match. This enforces the correct user flow.
+    if (!activeMatch) {
+      onToast("No active match found.", "error");
+      navigate('/matchmaking');
       return;
     }
     
-    // The user ID is no longer needed in the path.
-    // Instead, we append the token as a query parameter.
-    const ws = new WebSocket(`ws://localhost:8000/api/match/ws/matchmaking?token=${token}`);
+    // If we have a match, populate the component's state.
+    setProblem(activeMatch.problem);
+    setMatch({ match_id: activeMatch.match_id, opponent_id: activeMatch.opponent_id });
+    const savedTime = parseInt(localStorage.getItem('matchTime') || '0', 10);
+    setTime(savedTime);
+    setIsTimerRunning(true);
+    setStatusMessage(''); // Clear "Initializing..."
+
+    // **SECURITY NOTE**: Passing the token in the URL can be a security risk if server logs include full URLs.
+    // A more secure method is to send the token in the first message over the established WebSocket connection.
+    // This requires backend changes to support that flow.
+    const ws = new WebSocket(`ws://localhost:8000/api/match/ws/matchmaking?token=${token}&match_id=${activeMatch.match_id}`);
+    wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log("WebSocket connection established.");
-      setStatusMessage("Searching for an opponent...");
+      console.log("WebSocket connection established for the match.");
     };
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
+      // **MODIFIED**: This handler is now simplified. It only cares about in-match events.
+      // Cases like 'waiting' or 'matched' are no longer relevant here.
       switch(data.status) {
-        case 'waiting':
-            setStatusMessage("Waiting in queue...");
-            break;
-        case 'matched':
-          setProblem(data.problem);
-          setMatch({ match_id: data.match_id, opponent_id: data.opponent_id });
-          setIsTimerRunning(true);
-          break;
         case 'opponent_finished':
           setOpponentNotification(data.detail);
           break;
-        case 'error':
-          setStatusMessage(`Error: ${data.detail}`);
+        
+        // **BUG FIX**: This logic properly handles the opponent quitting.
+        case 'opponent_quit':
+          setIsTimerRunning(false);
+          onToast("Opponent has left the match.", "info");
+          
+          // Clean up all local traces of the match.
+          localStorage.removeItem('activeMatch');
+          localStorage.removeItem('matchTime');
+          setMatch(null);
+          setProblem(null);
+          
+          // Redirect the user after a short delay so they can see the message.
+          setTimeout(() => navigate('/matchmaking'), 3000);
           break;
+
+        case 'opponent_reconnected':
+          setOpponentNotification("Opponent has reconnected.");
+          break;
+        
+        case 'error':
+          onToast(`Match Error: ${data.detail}`, 'error');
+          localStorage.removeItem('activeMatch');
+          localStorage.removeItem('matchTime');
+          setTimeout(() => navigate('/matchmaking'), 3000);
+          break;
+          
         default:
-          console.log("Received unhandled message:", data);
+          console.log("Received unhandled WebSocket message:", data);
       }
     };
 
     ws.onerror = (error) => {
       console.error("WebSocket error:", error);
-      setStatusMessage("Connection error. Please refresh the page.");
+      onToast("Connection to the match server failed. Please refresh.", "error");
+      setIsTimerRunning(false); // Stop the timer on connection loss
     };
 
     ws.onclose = () => {
       console.log("WebSocket connection closed.");
-      if (isTimerRunning) setIsTimerRunning(false);
     };
 
+    // **ROBUSTNESS**: Cleanup function to close WebSocket on component unmount.
     return () => {
-      ws.close();
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
     };
-  }, []); // Empty array ensures this runs only once
+  }, [navigate, onToast]); // Dependencies for the main effect.
 
-  // Timer logic
+  // Effect for the timer
   useEffect(() => {
     let timerId = null;
-    if (isTimerRunning) {
-      timerId = setInterval(() => setTime(prevTime => prevTime + 1), 1000);
+    if (isTimerRunning && match) {
+      timerId = setInterval(() => {
+        setTime(prevTime => {
+          const newTime = prevTime + 1;
+          // **ROBUSTNESS**: Persist time every second to localStorage.
+          localStorage.setItem('matchTime', newTime.toString());
+          return newTime;
+        });
+      }, 1000);
     }
     return () => clearInterval(timerId);
-  }, [isTimerRunning]);
+  }, [isTimerRunning, match]);
 
-  // Logic to update editor when a new problem arrives
+  // Effect to load the correct code template when the problem or language changes.
   useEffect(() => {
     if (problem) {
       const templateKey = `frontend_template_${language}`;
@@ -131,13 +155,15 @@ const CodeEditor = () => {
       setOpponentNotification('');
     }
   }, [problem, language]);
-
-  //use effect for opponent notification
+  
   useEffect(()=>{
-    setTimeout(()=>{
-      setOpponentNotification('');
-    },6000) // clear after 6 secs.
-  },[opponentNotification])
+    if(opponentNotification) {
+      const timer = setTimeout(() => {
+        setOpponentNotification('');
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  },[opponentNotification]);
 
   const formatTime = (totalSeconds) => {
     const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
@@ -146,6 +172,27 @@ const CodeEditor = () => {
   };
 
   const handleTimerToggle = () => setIsTimerRunning(prev => !prev);
+  
+  const handleQuitMatch = async () => {
+    if (!match?.match_id) return;
+    if (!window.confirm("Are you sure you want to quit? This will end the match and be recorded as a loss.")) {
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('http://localhost:8000/api/match/quit', { match_id: match.match_id }, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      // **MODIFIED**: The backend will notify the other player. We just need to clean up and navigate.
+      localStorage.removeItem('activeMatch');
+      localStorage.removeItem('matchTime');
+      onToast("You have left the match.", "info");
+      navigate('/matchmaking');
+    } catch (error) {
+      console.error("Failed to quit match:", error);
+      onToast(error.response?.data?.detail || "Could not quit the match. Please try again.", "error");
+    }
+  };
   
   const testCases = problem?.test_cases || [];
 
@@ -186,10 +233,21 @@ const CodeEditor = () => {
             match_id: match?.match_id,
             opponent_id: match?.opponent_id
         }, { headers: { 'Authorization': `Bearer ${token}` } });
-        setSubmissionResult(response.data.status); 
+        
+        setSubmissionResult(response.data.status);
+        
+        // **MODIFIED**: If submission is accepted, the match is over. Clean up.
+        if (response.data.status === 'Accepted') {
+            onToast("Congratulations! You solved the problem!", "success");
+            localStorage.removeItem('activeMatch');
+            localStorage.removeItem('matchTime');
+        }
+
     } catch (error) {
         console.error("Submission failed:", error);
-        setSubmissionResult("Submission Failed: " + (error.response?.data?.detail || "An unexpected error occurred."));
+        const errorMsg = error.response?.data?.detail || "An unexpected error occurred.";
+        setSubmissionResult(`Submission Failed: ${errorMsg}`);
+        onToast(errorMsg, 'error');
     } finally {
         setIsSubmitting(false);
     }
@@ -203,6 +261,7 @@ const CodeEditor = () => {
     return 'text-gray-400';
   };
 
+  // **MODIFIED**: The initial loading state is now more informative.
   if (!problem || !match) {
     return (
       <div className="h-screen bg-black flex items-center justify-center text-white font-pixel">
@@ -252,6 +311,9 @@ const CodeEditor = () => {
                 </button>
                 <span className="font-mono text-lg">{formatTime(time)}</span>
               </div>
+              <button onClick={handleQuitMatch} title="Quit Match" className="flex items-center gap-2 text-red-400 hover:text-white">
+                  <LogOut size={18} />
+              </button>
             </div>
           </div>
           
@@ -336,7 +398,6 @@ const CodeEditor = () => {
             </button>
           </div>
         </div>
-
       </Split>
     </div>
   );
