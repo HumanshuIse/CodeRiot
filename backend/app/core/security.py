@@ -1,16 +1,19 @@
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
 import jwt
-from app.core.config import SECRET_KEY, ALGORITHM
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt  # we'll switch to python-jose (better support than PyJWT)
-from app.core.config import SECRET_KEY, ALGORITHM
 from app.db.database import get_db
 from app.models.user import User
 from sqlalchemy.orm import Session
+import os
+from dotenv import load_dotenv
+load_dotenv() 
 
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def hash_password(password: str) -> str:

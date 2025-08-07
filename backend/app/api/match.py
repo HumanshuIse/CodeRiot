@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisco
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import func
 from pydantic import BaseModel
-
+import os
 from app.db.database import get_db
 from app.models.problem import Problem
 from app.models.user import User
@@ -14,11 +14,13 @@ from app.schemas.problems import ProblemOut
 from app.core.websockets import manager
 from app.core.security import get_current_user, ALGORITHM, SECRET_KEY
 from jose import jwt, JWTError
+from dotenv import load_dotenv
+load_dotenv()
 
-REDIS_HOST = "localhost"
-REDIS_PORT = 6379
+REDIS_HOST = os.getenv("REDIS_HOST")
+REDIS_PORT = os.getenv("REDIS_PORT")
 redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
-MATCHMAKING_QUEUE_KEY = "matchmaking:queue"
+MATCHMAKING_QUEUE_KEY = os.getenv("MATCHMAKING_QUEUE_KEY")
 router = APIRouter()
 
 class QuitMatchRequest(BaseModel):

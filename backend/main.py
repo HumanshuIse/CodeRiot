@@ -6,11 +6,14 @@ from app.api import new_problems
 from app.models.user import User
 from app.models.problem import Problem
 from app.models.submission import Submission
+from dotenv import load_dotenv
+import os
+load_dotenv()
 Base.metadata.create_all(bind=engine)
-
+frontend_url = os.getenv("frontend_url")
 app = FastAPI()
 origins = [ 
-    "http://localhost:5173",     # if you're using Vite
+    frontend_url    
 ]
 
 app.add_middleware(

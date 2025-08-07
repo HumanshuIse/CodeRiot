@@ -12,11 +12,13 @@ from app.core.security import get_current_user
 from app.schemas.submission import SubmissionIn, SubmissionOut
 # --- MODIFIED: Import the global connection manager ---
 from app.core.websockets import manager
-
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 router = APIRouter()
 
-JUDGE_SERVER_URL = "http://localhost:8001/execute"
+JUDGE_SERVER_URL = os.getenv("JUDGE_SERVER_URL")
 
 @router.post("/submission", response_model=SubmissionOut, tags=["Submissions"])
 async def create_submission(
