@@ -13,7 +13,8 @@ const PlayerCard = ({ username, isOpponent = false }) => (
         <p className="font-tech text-sm text-gray-400">{isOpponent ? 'Opponent' : 'You'}</p>
     </div>
 );
-
+const backendUrl = import.meta.env.VITE_API_URL;
+const wsUrl = import.meta.env.VITE_WS_URL;
 const Matchmaking = ({ userId, username, onToast, onMatchFound }) => {
     const [status, setStatus] = useState('idle');
     const [matchDetails, setMatchDetails] = useState(null);
@@ -25,7 +26,7 @@ const Matchmaking = ({ userId, username, onToast, onMatchFound }) => {
 
     const fetchOpponentUsername = useCallback(async (opponentId) => {
         try {
-            const response = await axios.get(`http://localhost:8000/api/users/${opponentId}`);
+            const response = await axios.get(`${backendUrl}/api/users/${opponentId}`);
             if (response.data && response.data.username) {
                 setOpponentUsername(response.data.username);
             }
@@ -38,7 +39,7 @@ const Matchmaking = ({ userId, username, onToast, onMatchFound }) => {
     useEffect(() => {
         if (status === 'searching' && !socketRef.current) {
             const token = localStorage.getItem('token');
-            const newSocket = new WebSocket(`ws://localhost:8000/api/match/ws/matchmaking?token=${token}`);
+            const newSocket = new WebSocket(`${wsUrl}/api/match/ws/matchmaking?token=${token}`);
             socketRef.current = newSocket;
 
             newSocket.onopen = () => {

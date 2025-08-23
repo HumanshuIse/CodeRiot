@@ -13,7 +13,7 @@ const UserLogin = ({ onToast, onLoginSuccess }) => {
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
-
+  const backendUrl = import.meta.env.VITE_API_URL;
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -21,10 +21,10 @@ const UserLogin = ({ onToast, onLoginSuccess }) => {
       onToast('Please enter both username and password', 'error');
       return;
     }
-
+    
     setIsLoading(true);
     try {
-      const response = await axios.post('http://localhost:8000/api/auth/login', {
+      const response = await axios.post(`${backendUrl}/api/auth/login`, {
         username: form.username,
         password: form.password
       });

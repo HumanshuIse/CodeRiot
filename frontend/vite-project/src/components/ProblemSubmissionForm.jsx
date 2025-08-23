@@ -20,7 +20,7 @@ const ProblemSubmissionForm = ({ onToast }) => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-
+  const backendUrl = import.meta.env.VITE_API_URL;
   const classNames = {
     button: "bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-6 py-3 font-tech font-semibold text-base rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105",
     input: "flex h-10 w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 font-tech",
@@ -90,7 +90,7 @@ const ProblemSubmissionForm = ({ onToast }) => {
       const { tagInput, ...payload } = formData;
       
       await axios.post(
-        'http://localhost:8000/api/problems/submit-problem',
+        `${backendUrl}/api/problems/submit-problem`,
         payload,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );

@@ -50,12 +50,13 @@ const CodeEditor = ({ onToast }) => {
   const [statusMessage, setStatusMessage] = useState('Initializing match...');
   const [isHintLoading, setIsHintLoading] = useState(false);
   const [hint, setHint] = useState('');
-  const [showHint, setShowHint] = useState(false);
+  const [showHint, setShowHint] = useState(false);  
 
-
-  const JUDGE_SERVER_URL = 'http://localhost:8001/execute';
-  const SUBMISSION_API_URL = 'http://localhost:8000/api/submission';
-  const HINT_API_URL = 'http://localhost:8000/api/problems';
+  const backendUrl = import.meta.env.VITE_API_URL;
+  const wsUrl = import.meta.env.VITE_WS_URL;
+  const JUDGE_SERVER_URL = `${backendUrl}/execute`;
+  const SUBMISSION_API_URL = `${backendUrl}/api/submission`;
+  const HINT_API_URL = `${backendUrl}/api/problems`;
   const wsRef = useRef(null);
 
   useEffect(() => {
@@ -75,7 +76,7 @@ const CodeEditor = ({ onToast }) => {
     setIsTimerRunning(true);
     setStatusMessage('');
 
-    const ws = new WebSocket(`ws://localhost:8000/api/match/ws/matchmaking?token=${token}&match_id=${activeMatch.match_id}`);
+    const ws = new WebSocket(`${wsUrl}/api/match/ws/matchmaking?token=${token}&match_id=${activeMatch.match_id}`);
     wsRef.current = ws;
 
     ws.onopen = () => console.log("WebSocket connection established for the match.");
@@ -169,7 +170,7 @@ const CodeEditor = ({ onToast }) => {
     if (!match?.match_id || !window.confirm("Are you sure you want to quit? This will end the match and be recorded as a loss.")) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:8000/api/match/quit', { match_id: match.match_id }, {
+      await axios.post(`${backendUrl}/api/match/quit`, { match_id: match.match_id }, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       localStorage.removeItem('activeMatch');

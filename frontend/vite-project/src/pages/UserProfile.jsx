@@ -13,7 +13,7 @@ const UserProfile = ({ onToast }) => { // Removed setActiveTab, now receives nav
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate(); // Initialize useNavigate
-
+  const backendUrl = import.meta.env.VITE_API_URL;
   useEffect(() => {
     const fetchUserProfile = async () => {
       setIsLoading(true);
@@ -25,8 +25,7 @@ const UserProfile = ({ onToast }) => { // Removed setActiveTab, now receives nav
           navigate('/auth'); // Redirect to auth route
           return;
         }
-
-        const response = await axios.get('http://localhost:8000/api/auth/profile', {
+        const response = await axios.get(`${backendUrl}/api/auth/profile`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

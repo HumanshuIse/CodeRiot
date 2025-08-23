@@ -44,10 +44,10 @@ const App = () => {
     navigate('/');
     showToast('Logged out successfully', 'success');
   }, [showToast]);
-
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const fetchUserProfile = useCallback(async (token, navigate) => {
     try {
-      const response = await axios.get('http://localhost:8000/api/auth/profile', {
+      const response = await axios.get(`${backendUrl}/api/auth/profile`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setIsLoggedIn(true);
