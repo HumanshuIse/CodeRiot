@@ -54,7 +54,8 @@ const CodeEditor = ({ onToast }) => {
 
   const backendUrl = import.meta.env.VITE_API_URL;
   const wsUrl = import.meta.env.VITE_WS_URL;
-  const JUDGE_SERVER_URL = `${backendUrl}/execute`;
+  const judgeServerUrl = import.meta.env.VITE_JUDGE_SERVER_URL;
+  const JUDGE_SERVER_URL = `${judgeServerUrl}/execute`;
   const SUBMISSION_API_URL = `${backendUrl}/api/submission`;
   const HINT_API_URL = `${backendUrl}/api/problems`;
   const wsRef = useRef(null);

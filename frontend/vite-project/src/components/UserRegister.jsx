@@ -15,7 +15,7 @@ const UserRegister = ({ onToast, onLoginSuccess }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate(); // Initialize useNavigate
-
+  const backendUrl = import.meta.env.VITE_API_URL;
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
