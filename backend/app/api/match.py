@@ -137,6 +137,7 @@ async def matchmaking_websocket(
             opponent_id = player2_id if user_id == player1_id else player1_id
             await manager.send_personal_message({"status": "opponent_reconnected"}, opponent_id)
         else:
+            redis_client.lrem(MATCHMAKING_QUEUE_KEY, 0, user_id)
             redis_client.lpush(MATCHMAKING_QUEUE_KEY, user_id)
             await manager.send_personal_message({"status": "waiting"}, user_id)
             await attempt_to_create_match(db)
