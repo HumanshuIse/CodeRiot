@@ -281,7 +281,7 @@ const CodeEditor = ({ onToast }) => {
               <div className="bg-gray-800 border border-yellow-400 rounded-lg shadow-2xl p-6 max-w-lg w-full transform transition-all duration-300 scale-95 hover:scale-100" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center mb-4">
                       <Lightbulb className="text-yellow-400 mr-3" size={28} />
-                      <h2 className="text-2xl font-pixel text-yellow-300">Yogi's Hint</h2>
+                      <h2 className="text-2xl font-pixel text-yellow-300">HintAI</h2>
                   </div>
                   <p className="text-gray-300 leading-relaxed">{hint}</p>
                   <button onClick={() => setShowHint(false)} className="mt-6 w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded transition-colors duration-200">
