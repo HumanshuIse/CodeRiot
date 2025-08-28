@@ -1,7 +1,7 @@
 // src/App.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, useSearchParams } from 'react-router-dom';
 
 // Import Components
 import Navbar from './components/Navbar';
@@ -16,14 +16,68 @@ import Home from './pages/Home';
 import UserProfile from './pages/UserProfile';
 import Matchmaking from './pages/Matchmaking';
 
+// --- NEW COMPONENT: GoogleSignInButton ---
+// This component provides the button to start the Google OAuth flow.
+const GoogleIcon = () => (
+  <svg className="w-5 h-5 mr-3" viewBox="0 0 48 48">
+    <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039L38.802 8.94C34.353 4.909 29.493 2.5 24 2.5C11.936 2.5 2.5 11.936 2.5 24s9.436 21.5 21.5 21.5c11.953 0 21.227-9.523 21.489-21.233c.023-.192.038-.389.038-.588c0-.621-.054-1.229-.15-1.832z" />
+    <path fill="#FF3D00" d="M6.306 14.691c-2.221 4.316-2.221 9.31 0 13.626l-3.39 3.39c-3.447-6.59-3.447-14.47 0-21.06l3.39 3.39z" />
+    <path fill="#4CAF50" d="M24 45.5c5.493 0 10.353-2.409 13.802-6.56l-4.998-4.998c-2.185 1.832-4.96 2.922-8.804 2.922c-5.223 0-9.66-3.343-11.303-8H2.5v8.023C6.953 41.091 14.993 45.5 24 45.5z" />
+    <path fill="#1976D2" d="M43.611 20.083H24v8h11.303c-.792 2.237-2.237 4.14-4.285 5.443l4.998 4.998C42.008 34.61 45.5 28.92 45.5 24c0-1.922-.22-3.81-.623-5.631l-1.266-1.286z" />
+  </svg>
+);
+
+const GoogleSignInButton = () => {
+  const backendUrl = import.meta.env.VITE_API_URL;
+  const handleGoogleSignIn = () => {
+    window.location.href = `${backendUrl}/api/auth/google`;
+  };
+  return (
+    <button
+      type="button"
+      onClick={handleGoogleSignIn}
+      className="w-full flex items-center justify-center bg-white text-gray-800 py-3 px-4 rounded-lg font-semibold hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-all duration-200 pixel-border-light"
+    >
+      <GoogleIcon />
+      Sign in with Google
+    </button>
+  );
+};
+
+// --- NEW COMPONENT: AuthCallbackPage ---
+// This component handles the redirect back from the backend after Google auth.
+const AuthCallbackPage = ({ onLoginSuccess, showToast }) => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = searchParams.get('token');
+    if (token) {
+      // The onLoginSuccess function from App.jsx handles everything else
+      onLoginSuccess(token, navigate);
+    } else {
+      showToast('Google authentication failed. Please try again.', 'error');
+      navigate('/auth');
+    }
+  }, [searchParams, navigate, onLoginSuccess, showToast]);
+
+  return (
+    <div className="flex items-center justify-center h-screen bg-black text-white">
+      <div className="text-center font-tech">
+        <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <h1 className="text-2xl">Finalizing Login...</h1>
+        <p className="text-gray-400">Please wait while we securely log you in.</p>
+      </div>
+    </div>
+  );
+};
+
+
 const App = () => {
   const [toastInfo, setToastInfo] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState('');
   const [userId, setUserId] = useState(null);
-
-  // Removed currentMatch state as CodeEditor now reliably uses localStorage
-  // which is better for reload persistence.
 
   const showToast = useCallback((message, type) => {
     setToastInfo({ message, type });
@@ -38,12 +92,12 @@ const App = () => {
     setUsername('');
     setUserId(null);
     localStorage.removeItem('token');
-    // **MODIFIED**: Also clear any active match data on logout.
     localStorage.removeItem('activeMatch');
     localStorage.removeItem('matchTime');
     navigate('/');
     showToast('Logged out successfully', 'success');
   }, [showToast]);
+
   const backendUrl = import.meta.env.VITE_API_URL;
   const fetchUserProfile = useCallback(async (token, navigate) => {
     try {
@@ -56,10 +110,9 @@ const App = () => {
       return response.data;
     } catch (error) {
       console.error("Failed to fetch user profile:", error);
-      // **MODIFIED**: If the token is invalid/expired, log the user out completely.
       if (error.response && (error.response.status === 401 || error.response.status === 403)) {
         showToast("Your session expired. Please log in again.", "error");
-        handleLogout(navigate); // Pass navigate to handleLogout
+        handleLogout(navigate);
       }
       throw error;
     }
@@ -76,21 +129,14 @@ const App = () => {
     }
   }, [fetchUserProfile, showToast]);
 
-
-  // **MODIFIED**: Centralized match data persistence here.
-  // This function is now the single source of truth for starting a match session.
   const handleMatchFound = useCallback((matchData, navigate) => {
-    // Set the active match details and timer in localStorage *before* navigating.
-    // This ensures that even if the app is slow, the data is there when CodeEditor mounts.
     localStorage.setItem('activeMatch', JSON.stringify(matchData));
-    localStorage.setItem('matchTime', '0'); // Reset timer for the new match
+    localStorage.setItem('matchTime', '0');
     navigate('/editor');
   }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    // This is a placeholder navigate function for the initial check.
-    // In a real app, you might want to handle this differently, but it works for now.
     const pseudoNavigate = (path) => window.location.pathname = path;
     if (token) {
       fetchUserProfile(token, pseudoNavigate).catch(() => {});
@@ -148,7 +194,6 @@ const AppContent = ({
       />
       <Routes>
         <Route path="/" element={<Home onGetStarted={handleGetStarted} />} />
-        {/* **MODIFIED**: CodeEditor no longer needs props, it's self-sufficient with localStorage. */}
         <Route path="/editor" element={
           isLoggedIn ? (
             <CodeEditor onToast={showToast} />
@@ -185,24 +230,41 @@ const AppContent = ({
         <Route path="/auth" element={
           <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
         } />
+        
+        {/* --- NEW ROUTE for Google OAuth Callback --- */}
+        <Route path="/auth/callback" element={
+          <AuthCallbackPage onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
+        } />
       </Routes>
     </div>
   );
 };
 
+// --- MODIFIED AuthPage Component ---
 const AuthPage = ({ authTab, setAuthTab, onLoginSuccess, showToast }) => (
-    // ... No changes to this component
     <div className="min-h-screen bg-black flex items-center justify-center py-8">
         <div className="w-full max-w-md px-4">
             <div className="text-center mb-8">
                 <h1 className="text-4xl font-pixel text-white">CodeRiot</h1>
             </div>
             <div className="bg-gray-900/70 backdrop-blur-sm rounded-lg shadow-xl border border-gray-700 pixel-border">
-                <div className="flex border-b border-gray-700">
-                    <button onClick={() => setAuthTab('login')} className={`flex-1 py-4 font-tech ${ authTab === 'login' ? 'bg-gray-800 text-white' : 'text-gray-400' }`}>Login</button>
-                    <button onClick={() => setAuthTab('register')} className={`flex-1 py-4 font-tech ${ authTab === 'register' ? 'bg-gray-800 text-white' : 'text-gray-400' }`}>Register</button>
-                </div>
-                <div className="p-8">
+                <div className="p-8 space-y-6">
+                    {/* Google Button and Divider */}
+                    <GoogleSignInButton />
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-700" />
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                            <span className="px-2 bg-gray-900 text-gray-400 font-tech">OR</span>
+                        </div>
+                    </div>
+                    {/* Tab Buttons */}
+                    <div className="flex border border-gray-700 rounded-lg">
+                        <button onClick={() => setAuthTab('login')} className={`flex-1 py-3 font-tech rounded-l-md ${ authTab === 'login' ? 'bg-gray-800 text-white' : 'text-gray-400' }`}>Login</button>
+                        <button onClick={() => setAuthTab('register')} className={`flex-1 py-3 font-tech rounded-r-md ${ authTab === 'register' ? 'bg-gray-800 text-white' : 'text-gray-400' }`}>Register</button>
+                    </div>
+                    {/* Login/Register Forms */}
                     {authTab === 'login' && <UserLogin onToast={showToast} onLoginSuccess={onLoginSuccess} />}
                     {authTab === 'register' && <UserRegister onToast={showToast} onLoginSuccess={onLoginSuccess} />}
                 </div>
