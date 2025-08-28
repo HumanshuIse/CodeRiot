@@ -1,16 +1,19 @@
 # app/routes/auth.py
-from fastapi import APIRouter, HTTPException, Depends, Request
+
+from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.models.user import User
-from app.models.problem import Problem # Import Problem model to count contributions
-from app.schemas.user import UserIn, Userlogin, Token, UserOut # Import UserOut
+from app.models.problem import Problem 
+from app.schemas.user import UserIn, Userlogin, Token, UserOut
 from app.core.security import hash_password, verify_password, create_access_token, get_current_user
 from fastapi.security import OAuth2PasswordRequestForm
 from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv
 import os
+from app.core.email_utils import send_email
+
 load_dotenv()
 
 #google auth setup
@@ -27,7 +30,7 @@ oauth.register(
 router = APIRouter()
 
 @router.post("/register", response_model=Token)
-def register(user: UserIn, db: Session = Depends(get_db)):
+def register(user: UserIn, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     if db.query(User).filter((User.username == user.username) | (User.email == user.email)).first():
         raise HTTPException(status_code=400, detail="Username or email already exists")
 
@@ -37,6 +40,11 @@ def register(user: UserIn, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
+    # --- Send registration email in the background ---
+    subject = "🎉 Welcome to Our Platform!"
+    body = f"Hi {new_user.username},\n\nThank you for registering. We're excited to have you!"
+    background_tasks.add_task(send_email, new_user.email, subject, body)
+    
     token_data = {"user_id": new_user.id, "sub": new_user.username}
     token = create_access_token(token_data)
     return {
@@ -45,15 +53,20 @@ def register(user: UserIn, db: Session = Depends(get_db)):
     }
 
 @router.post("/login", response_model=Token)
-def login(user: Userlogin, db: Session = Depends(get_db)):
+def login(user: Userlogin, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == user.username).first()
     if not db_user or not verify_password(user.password, db_user.password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
+    # --- Send login notification email ---
+    subject = "🔒 New Login to Your Account"
+    body = f"Hi {db_user.username},\n\nWe detected a new login to your account. If this wasn't you, please secure your account."
+    background_tasks.add_task(send_email, db_user.email, subject, body)
+    
     token = create_access_token({"user_id":db_user.id,"sub": db_user.username})
     return {"access_token": token, "token_type": "bearer"}
 
-@router.get("/profile", response_model=UserOut) # Use the new UserOut schema
+@router.get("/profile", response_model=UserOut)
 def get_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     # Count problems contributed by the current user
     problems_contributed_count = db.query(Problem).filter(Problem.contributor_id == current_user.id).count()
@@ -62,15 +75,20 @@ def get_profile(current_user: User = Depends(get_current_user), db: Session = De
         "id": current_user.id,
         "username": current_user.username,
         "email": current_user.email,
-        "created_at": current_user.created_at, # Include the created_at timestamp
-        "problems_contributed_count": problems_contributed_count # Include the count
+        "created_at": current_user.created_at,
+        "problems_contributed_count": problems_contributed_count
     }
 
 @router.post("/token", response_model=Token)
-def login_with_form(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login_with_form(background_tasks: BackgroundTasks, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == form_data.username).first()
     if not db_user or not verify_password(form_data.password, db_user.password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    # --- Send login notification email ---
+    subject = "🔒 New Login to Your Account"
+    body = f"Hi {db_user.username},\n\nWe detected a new login to your account. If this wasn't you, please secure your account."
+    background_tasks.add_task(send_email, db_user.email, subject, body)
 
     token = create_access_token({"user_id":db_user.id,"sub": db_user.username})
     return {"access_token": token, "token_type": "bearer"}
@@ -85,7 +103,7 @@ async def google_login(request: Request):
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 @router.get("/google/callback", name="google_callback")
-async def google_callback(request: Request, db: Session = Depends(get_db)):
+async def google_callback(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """
     Handles the callback from Google, creates/logs in the user,
     and returns a JWT token.
@@ -99,8 +117,10 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
     email = user_info['email']
     db_user = db.query(User).filter(User.email == email).first()
 
+    is_new_user = False
     # If user doesn't exist, create a new one
     if not db_user:
+        is_new_user = True
         # Create a unique username from the email
         username = email.split('@')[0]
         temp_username = username
@@ -121,8 +141,17 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
         db.refresh(new_user)
         db_user = new_user
 
-    # Create an access token for the user (same as your /login endpoint)
-    #
+    # --- Send appropriate email based on whether it's a new registration or login ---
+    if is_new_user:
+        subject = "🎉 Welcome via Google!"
+        body = f"Hi {db_user.username},\n\nThank you for registering with your Google account."
+    else:
+        subject = "🔒 New Login to Your Account (via Google)"
+        body = f"Hi {db_user.username},\n\nWe detected a new login to your account using Google."
+        
+    background_tasks.add_task(send_email, db_user.email, subject, body)
+    
+    # Create an access token for the user
     access_token = create_access_token({"user_id": db_user.id, "sub": db_user.username})
 
     # Redirect the user to the frontend with the token
