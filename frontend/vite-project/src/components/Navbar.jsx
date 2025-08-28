@@ -1,6 +1,7 @@
 // src/components/Navbar.jsx
 import React, { useState } from 'react';
-import { Menu, X, Code, Users, Trophy, User, LogOut, Terminal, Home as HomeIcon } from 'lucide-react';
+// --- V V V --- ADD THE 'Info' ICON HERE --- V V V ---
+import { Menu, X, Code, Users, Trophy, User, LogOut, Terminal, Home as HomeIcon, Info } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom'; // Import hooks
 
 const Navbar = ({ isLoggedIn, username, onLogout }) => {
@@ -10,9 +11,10 @@ const Navbar = ({ isLoggedIn, username, onLogout }) => {
 
   const navItems = [
     { id: 'home', label: 'Home', icon: HomeIcon, path: '/' },
-    { id: 'editor', label: 'Code Editor', icon: Terminal, path: '/editor' },
     { id: 'matchmaking', label: 'Matchmaking', icon: Users, path: '/matchmaking' },
     { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, path: '/leaderboard' },
+    // --- V V V --- ADD THE 'About Us' OBJECT HERE --- V V V ---
+    { id: 'about', label: 'About Us', icon: Info, path: '/about' },
   ];
 
   const handleNavClick = (path) => {

@@ -15,9 +15,9 @@ import ProblemSubmissionForm from './components/ProblemSubmissionForm';
 import Home from './pages/Home';
 import UserProfile from './pages/UserProfile';
 import Matchmaking from './pages/Matchmaking';
+import AboutUs from './pages/AboutUs';
 
-// --- NEW COMPONENT: GoogleSignInButton ---
-// This component provides the button to start the Google OAuth flow.
+// --- GoogleSignInButton Component ---
 const GoogleIcon = () => (
   <svg className="w-5 h-5 mr-3" viewBox="0 0 48 48">
     <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039L38.802 8.94C34.353 4.909 29.493 2.5 24 2.5C11.936 2.5 2.5 11.936 2.5 24s9.436 21.5 21.5 21.5c11.953 0 21.227-9.523 21.489-21.233c.023-.192.038-.389.038-.588c0-.621-.054-1.229-.15-1.832z" />
@@ -44,8 +44,7 @@ const GoogleSignInButton = () => {
   );
 };
 
-// --- NEW COMPONENT: AuthCallbackPage ---
-// This component handles the redirect back from the backend after Google auth.
+// --- AuthCallbackPage Component ---
 const AuthCallbackPage = ({ onLoginSuccess, showToast }) => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -53,7 +52,6 @@ const AuthCallbackPage = ({ onLoginSuccess, showToast }) => {
   useEffect(() => {
     const token = searchParams.get('token');
     if (token) {
-      // The onLoginSuccess function from App.jsx handles everything else
       onLoginSuccess(token, navigate);
     } else {
       showToast('Google authentication failed. Please try again.', 'error');
@@ -71,7 +69,6 @@ const AuthCallbackPage = ({ onLoginSuccess, showToast }) => {
     </div>
   );
 };
-
 
 const App = () => {
   const [toastInfo, setToastInfo] = useState(null);
@@ -227,11 +224,13 @@ const AppContent = ({
             <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
           )
         } />
+        
+        <Route path="/about" element={<AboutUs />} />
+
         <Route path="/auth" element={
           <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
         } />
         
-        {/* --- NEW ROUTE for Google OAuth Callback --- */}
         <Route path="/auth/callback" element={
           <AuthCallbackPage onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
         } />
@@ -240,7 +239,7 @@ const AppContent = ({
   );
 };
 
-// --- MODIFIED AuthPage Component ---
+// --- AuthPage Component ---
 const AuthPage = ({ authTab, setAuthTab, onLoginSuccess, showToast }) => (
     <div className="min-h-screen bg-black flex items-center justify-center py-8">
         <div className="w-full max-w-md px-4">
@@ -249,7 +248,6 @@ const AuthPage = ({ authTab, setAuthTab, onLoginSuccess, showToast }) => (
             </div>
             <div className="bg-gray-900/70 backdrop-blur-sm rounded-lg shadow-xl border border-gray-700 pixel-border">
                 <div className="p-8 space-y-6">
-                    {/* Google Button and Divider */}
                     <GoogleSignInButton />
                     <div className="relative">
                         <div className="absolute inset-0 flex items-center">
@@ -259,12 +257,10 @@ const AuthPage = ({ authTab, setAuthTab, onLoginSuccess, showToast }) => (
                             <span className="px-2 bg-gray-900 text-gray-400 font-tech">OR</span>
                         </div>
                     </div>
-                    {/* Tab Buttons */}
                     <div className="flex border border-gray-700 rounded-lg">
                         <button onClick={() => setAuthTab('login')} className={`flex-1 py-3 font-tech rounded-l-md ${ authTab === 'login' ? 'bg-gray-800 text-white' : 'text-gray-400' }`}>Login</button>
                         <button onClick={() => setAuthTab('register')} className={`flex-1 py-3 font-tech rounded-r-md ${ authTab === 'register' ? 'bg-gray-800 text-white' : 'text-gray-400' }`}>Register</button>
                     </div>
-                    {/* Login/Register Forms */}
                     {authTab === 'login' && <UserLogin onToast={showToast} onLoginSuccess={onLoginSuccess} />}
                     {authTab === 'register' && <UserRegister onToast={showToast} onLoginSuccess={onLoginSuccess} />}
                 </div>
