@@ -8,6 +8,7 @@ from jose import JWTError, jwt  # we'll switch to python-jose (better support th
 from app.db.database import get_db
 from app.models.user import User
 from sqlalchemy.orm import Session
+from datetime import timezone
 import os
 from dotenv import load_dotenv
 load_dotenv() 
@@ -15,6 +16,10 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+#for password reset
+RESET_SECRET_KEY = os.getenv("SECRET_KEY_RESET")
+EXPIRE_MINUTES = int(os.getenv("RESET_TOKEN_EXPIRE_MINUTES"))
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
@@ -54,3 +59,27 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if user is None:
         raise credentials_exception
     return user
+
+def create_password_reset_token(email: str) -> str:
+    """
+    Generates a JWT token for password reset.
+    """
+    expire = datetime.now(timezone.utc) + timedelta(minutes=EXPIRE_MINUTES)
+    to_encode = {"exp": expire, "sub": email, "scope": "password_reset"}
+    encoded_jwt = jwt.encode(to_encode, RESET_SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def verify_password_reset_token(token: str) -> str | None:
+    """
+    Verifies the password reset token and returns the email.
+    """
+    try:
+        payload = jwt.decode(token, RESET_SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("scope") != "password_reset":
+            return None # Not the correct type of token
+        email = payload.get("sub")
+        if email is None:
+            return None
+        return email
+    except JWTError:
+        return None # Token is invalid or expired

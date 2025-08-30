@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.models.user import User
 from app.models.problem import Problem 
-from app.schemas.user import UserIn, Userlogin, Token, UserOut
-from app.core.security import hash_password, verify_password, create_access_token, get_current_user
+from app.schemas.user import UserIn, Userlogin, Token, UserOut, EmailSchema, ResetPasswordSchema
+from app.core.security import hash_password, verify_password, create_access_token, get_current_user,create_password_reset_token,verify_password_reset_token
 from fastapi.security import OAuth2PasswordRequestForm
 from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv
@@ -15,6 +15,7 @@ import os
 from app.core.email_utils import send_email
 
 load_dotenv()
+RESET_TOKEN_EXPIRE_MINUTES = os.getenv("RESET_TOKEN_EXPIRE_MINUTES")
 
 #google auth setup
 oauth = OAuth()
@@ -157,3 +158,50 @@ async def google_callback(request: Request, background_tasks: BackgroundTasks, d
     # Redirect the user to the frontend with the token
     frontend_redirect_url = f"{os.getenv('frontend_url')}/auth/callback?token={access_token}"
     return RedirectResponse(url=frontend_redirect_url)
+
+@router.post("/forgot-password")
+def forgot_password(request: EmailSchema, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == request.email).first()
+
+    # ❗️ Security: Always return a success message to prevent user enumeration
+    if not user:
+        return {"message": "If an account with that email exists, a password reset link has been sent."}
+
+    # Generate the token and reset link
+    token = create_password_reset_token(email=user.email)
+    frontend_url = os.getenv("frontend_url")
+    reset_link = f"{frontend_url}/reset-password?token={token}"
+
+    # Send the email in the background
+    subject = "🔑 Your Password Reset Request"
+    body = f"""
+    <p>Hi {user.username},</p>
+    <p>You requested to reset your password.</p>
+    <p>Please click the button below to set a new password. This link is valid for {RESET_TOKEN_EXPIRE_MINUTES} minutes.</p>
+    <a href="{reset_link}" style="display:inline-block;padding:10px 20px;background-color:#007bff;color:white;text-decoration:none;border-radius:5px;">
+        Reset Password
+    </a>
+    <p>If you did not request a password reset, please ignore this email.</p>
+    """
+    background_tasks.add_task(send_email, user.email, subject, body)
+
+    return {"message": "If an account with that email exists, a password reset link has been sent."}
+
+
+@router.post("/reset-password")
+def reset_password(request: ResetPasswordSchema, db: Session = Depends(get_db)):
+    email = verify_password_reset_token(request.token)
+    if not email:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        # This case should be rare if token generation is tied to existing users
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Update password
+    hashed_password = hash_password(request.new_password)
+    user.password = hashed_password
+    db.commit()
+
+    return {"message": "Password has been successfully reset."}

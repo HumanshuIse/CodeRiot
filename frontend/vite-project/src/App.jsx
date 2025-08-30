@@ -10,12 +10,14 @@ import UserLogin from './components/UserLogin';
 import UserRegister from './components/UserRegister';
 import CodeEditor from './components/CodeEditor';
 import ProblemSubmissionForm from './components/ProblemSubmissionForm';
+import ForgotPassword from './components/ForgotPassword'; // New import
 
 // Import Pages
 import Home from './pages/Home';
 import UserProfile from './pages/UserProfile';
 import Matchmaking from './pages/Matchmaking';
 import AboutUs from './pages/AboutUs';
+import ResetPasswordPage from './pages/ResetPasswordPage'; // New import
 
 // --- GoogleSignInButton Component ---
 const GoogleIcon = () => (
@@ -70,6 +72,55 @@ const AuthCallbackPage = ({ onLoginSuccess, showToast }) => {
   );
 };
 
+// --- AuthPage Component (Updated for Forgot Password) ---
+const AuthPage = ({ authTab, setAuthTab, onLoginSuccess, showToast }) => {
+    // State to switch between login/register and forgot password views
+    const [view, setView] = useState('main'); // 'main' or 'forgot-password'
+
+    const renderContent = () => {
+        if (view === 'forgot-password') {
+            return <ForgotPassword onToast={showToast} onBackToLogin={() => setView('main')} />;
+        }
+        
+        return (
+            <>
+                <GoogleSignInButton />
+                <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-700" />
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-gray-900 text-gray-400 font-tech">OR</span>
+                    </div>
+                </div>
+                <div className="flex border border-gray-700 rounded-lg">
+                    <button onClick={() => setAuthTab('login')} className={`flex-1 py-3 font-tech rounded-l-md ${ authTab === 'login' ? 'bg-gray-800 text-white' : 'text-gray-400' }`}>Login</button>
+                    <button onClick={() => setAuthTab('register')} className={`flex-1 py-3 font-tech rounded-r-md ${ authTab === 'register' ? 'bg-gray-800 text-white' : 'text-gray-400' }`}>Register</button>
+                </div>
+                {authTab === 'login' && <UserLogin onToast={showToast} onLoginSuccess={onLoginSuccess} onForgotPassword={() => setView('forgot-password')} />}
+                {authTab === 'register' && <UserRegister onToast={showToast} onLoginSuccess={onLoginSuccess} />}
+            </>
+        );
+    };
+
+    return (
+        <div className="min-h-screen bg-black flex items-center justify-center py-8">
+            <div className="w-full max-w-md px-4">
+                <div className="text-center mb-8">
+                    <h1 className="text-4xl font-pixel text-white">CodeRiot</h1>
+                </div>
+                <div className="bg-gray-900/70 backdrop-blur-sm rounded-lg shadow-xl border border-gray-700 pixel-border">
+                    <div className="p-8 space-y-6">
+                        {renderContent()}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+// --- Main App Component ---
 const App = () => {
   const [toastInfo, setToastInfo] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -113,7 +164,7 @@ const App = () => {
       }
       throw error;
     }
-  }, [showToast, handleLogout]);
+  }, [backendUrl, showToast, handleLogout]);
 
   const handleLogin = useCallback(async (token, navigate) => {
     localStorage.setItem('token', token);
@@ -158,6 +209,7 @@ const App = () => {
   );
 };
 
+// --- AppContent for Routing ---
 const AppContent = ({
   toastInfo,
   hideToast,
@@ -175,7 +227,7 @@ const AppContent = ({
   const handleGetStarted = useCallback(() => {
     navigate('/auth');
     setAuthTab('login');
-  }, [navigate, setAuthTab]);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -192,82 +244,33 @@ const AppContent = ({
       <Routes>
         <Route path="/" element={<Home onGetStarted={handleGetStarted} />} />
         <Route path="/editor" element={
-          isLoggedIn ? (
-            <CodeEditor onToast={showToast} />
-          ) : (
-            <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
-          )
+          isLoggedIn ? <CodeEditor onToast={showToast} /> : <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
         } />
         <Route path="/matchmaking" element={
-          isLoggedIn ? (
-            <Matchmaking userId={userId} username={username} onToast={showToast} onMatchFound={(matchData) => handleMatchFound(matchData, navigate)} />
-          ) : (
-            <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
-          )
+          isLoggedIn ? <Matchmaking userId={userId} username={username} onToast={showToast} onMatchFound={(matchData) => handleMatchFound(matchData, navigate)} /> : <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
         } />
-        <Route path="/leaderboard" element={
-          <div className="min-h-screen flex items-center justify-center text-white font-pixel text-2xl">
-            Leaderboard Coming Soon!
-          </div>
-        } />
+        <Route path="/leaderboard" element={ <div className="min-h-screen flex items-center justify-center text-white font-pixel text-2xl">Leaderboard Coming Soon!</div> } />
         <Route path="/profile" element={
-          isLoggedIn ? (
-            <UserProfile onToast={showToast} navigate={navigate} />
-          ) : (
-            <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
-          )
+          isLoggedIn ? <UserProfile onToast={showToast} navigate={navigate} /> : <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
         } />
         <Route path="/submit-problem" element={
-          isLoggedIn ? (
-            <ProblemSubmissionForm onToast={showToast} />
-          ) : (
-            <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
-          )
+          isLoggedIn ? <ProblemSubmissionForm onToast={showToast} /> : <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
         } />
-        
         <Route path="/about" element={<AboutUs />} />
-
         <Route path="/auth" element={
           <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
         } />
-        
         <Route path="/auth/callback" element={
           <AuthCallbackPage onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
         } />
+        
+        {/* --- New Route for Reset Password Page --- */}
+        <Route path="/reset-password" element={<ResetPasswordPage showToast={showToast} />} />
+
       </Routes>
     </div>
   );
 };
-
-// --- AuthPage Component ---
-const AuthPage = ({ authTab, setAuthTab, onLoginSuccess, showToast }) => (
-    <div className="min-h-screen bg-black flex items-center justify-center py-8">
-        <div className="w-full max-w-md px-4">
-            <div className="text-center mb-8">
-                <h1 className="text-4xl font-pixel text-white">CodeRiot</h1>
-            </div>
-            <div className="bg-gray-900/70 backdrop-blur-sm rounded-lg shadow-xl border border-gray-700 pixel-border">
-                <div className="p-8 space-y-6">
-                    <GoogleSignInButton />
-                    <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-700" />
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-gray-900 text-gray-400 font-tech">OR</span>
-                        </div>
-                    </div>
-                    <div className="flex border border-gray-700 rounded-lg">
-                        <button onClick={() => setAuthTab('login')} className={`flex-1 py-3 font-tech rounded-l-md ${ authTab === 'login' ? 'bg-gray-800 text-white' : 'text-gray-400' }`}>Login</button>
-                        <button onClick={() => setAuthTab('register')} className={`flex-1 py-3 font-tech rounded-r-md ${ authTab === 'register' ? 'bg-gray-800 text-white' : 'text-gray-400' }`}>Register</button>
-                    </div>
-                    {authTab === 'login' && <UserLogin onToast={showToast} onLoginSuccess={onLoginSuccess} />}
-                    {authTab === 'register' && <UserRegister onToast={showToast} onLoginSuccess={onLoginSuccess} />}
-                </div>
-            </div>
-        </div>
-    </div>
-);
 
 
 export default App;

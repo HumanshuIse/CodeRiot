@@ -35,3 +35,12 @@ class UserPublicOut(BaseModel):
 
     class Config:
          from_attributes = True
+
+
+#email schema for password reset
+class EmailSchema(BaseModel):
+    email: EmailStr
+    
+class ResetPasswordSchema(BaseModel):
+    token: str
+    new_password: str

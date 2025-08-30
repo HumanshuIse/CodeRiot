@@ -1,7 +1,7 @@
 "use client"
 
-import React from 'react';
-import { Github, Linkedin, Twitter, Code, UserCircle } from 'lucide-react';
+import React, { useState } from 'react'; // <-- 1. Import useState
+import { Github, Linkedin, Twitter } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Developer data - easy to update
@@ -23,7 +23,7 @@ const developers = [
     avatar: <img src="/aditya.png" alt="Aditya Shelar" className="w-24 h-24 rounded-full pixel-border transition-transform duration-300 hover:scale-110" />,
     bio: "The powerhouse who engineered the smart matchmaking system and robust FastAPI backend. Passionate about graph algorithms, database optimization, and ensuring every battle is fair and fast.",
     links: {
-      github: "https://github.com/aditya726",
+      github: "https://github.com/aditya7276",
       linkedin: "https://linkedin.com/in/aditya-shelar06",
       twitter: "https://twitter.com/aditya57275163",
     }
@@ -39,9 +39,11 @@ const SocialLink = ({ href, icon, label }) => (
 
 
 const AboutUs = () => {
+    // <-- 2. Add state to track the enlarged avatar's source URL
+    const [enlargedAvatar, setEnlargedAvatar] = useState(null);
+
     const fontPixelClassName = "font-pixel bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent text-shadow-neon";
     const fontTechClassName = "font-tech text-gray-300";
-    // <--- MODIFIED THIS LINE ---
     const cardClassName = "bg-gray-900/70 backdrop-blur-sm rounded-3xl shadow-xl p-6 border border-gray-700 pixel-border animate-glow-slow h-full flex flex-col";
 
   return (
@@ -60,7 +62,11 @@ const AboutUs = () => {
                 {developers.map((dev) => (
                     <Card key={dev.name} className={cardClassName}>
                         <CardHeader className="text-center">
-                            <div className="mx-auto mb-4">
+                            {/* <-- 3. Make the avatar clickable --> */}
+                            <div
+                                className="mx-auto mb-4 cursor-pointer"
+                                onClick={() => setEnlargedAvatar(dev.avatar.props.src)}
+                            >
                                 {dev.avatar}
                             </div>
                             <CardTitle className="text-3xl font-pixel text-white">
@@ -90,6 +96,22 @@ const AboutUs = () => {
                     We built CodeRiot with a passion for competitive programming and a love for retro aesthetics. Our goal was to create a platform that is not only challenging and fair but also fun and visually engaging. Every line of code was written with the community in mind.
                 </p>
             </div>
+        </div>
+
+        {/* <-- 4. Add the Modal for the enlarged avatar --> */}
+        <div
+            // This container handles the blurred background and closing functionality
+            className={`fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm transition-opacity duration-300 ease-in-out ${enlargedAvatar ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            onClick={() => setEnlargedAvatar(null)} // Click background to close
+        >
+            <img
+                src={enlargedAvatar}
+                alt="Enlarged Avatar"
+                // Prevent the click on the image itself from closing the modal
+                onClick={(e) => e.stopPropagation()}
+                // This class handles the smooth scaling of the image
+                className={`max-w-[90vw] max-h-[90vh] rounded-full object-contain pixel-border shadow-2xl shadow-cyan-500/50 transition-transform duration-300 ease-in-out ${enlargedAvatar ? 'scale-100' : 'scale-90'}`}
+            />
         </div>
     </div>
   );
