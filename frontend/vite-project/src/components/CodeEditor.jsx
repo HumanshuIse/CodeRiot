@@ -266,6 +266,9 @@ const CodeEditor = ({ onToast }) => {
       </div>
     );
   }
+  
+  // New variable to hold only the visible test cases (first two)
+  const visibleTestCases = testCases.slice(0, 2);
 
   return (
     <Suspense fallback={<LoadingFallback />}>
@@ -359,21 +362,21 @@ const CodeEditor = ({ onToast }) => {
                     {activeTab === 'testcases' && testCases.length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-2">
-                          {testCases.map((_, index) => (
+                          {visibleTestCases.map((_, index) => (
                             <button key={index} onClick={() => setActiveTestCaseIndex(index)} className={`px-3 py-1 rounded text-xs ${activeTestCaseIndex === index ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}>
                               Case {index + 1}
                             </button>
                           ))}
                         </div>
-                        {testCases[activeTestCaseIndex] && (
+                        {visibleTestCases[activeTestCaseIndex] && (
                           <div className="font-mono text-xs space-y-2">
-                            <div><label className="text-gray-400">Input:</label><pre className="bg-gray-800 p-2 rounded whitespace-pre-wrap">{testCases[activeTestCaseIndex].input}</pre></div>
-                            <div><label className="text-gray-400">Expected:</label><pre className="bg-gray-800 p-2 rounded whitespace-pre-wrap">{testCases[activeTestCaseIndex].expected_output}</pre></div>
+                            <div><label className="text-gray-400">Input:</label><pre className="bg-gray-800 p-2 rounded whitespace-pre-wrap">{visibleTestCases[activeTestCaseIndex].input}</pre></div>
+                            <div><label className="text-gray-400">Expected:</label><pre className="bg-gray-800 p-2 rounded whitespace-pre-wrap">{visibleTestCases[activeTestCaseIndex].expected_output}</pre></div>
                             <div>
                               <label className="text-gray-400">Your Output:</label>
                               <div className="bg-gray-800 p-2 rounded whitespace-pre-wrap min-h-[40px] flex justify-between items-center">
                                 <pre>{testCaseOutputs[activeTestCaseIndex]?.output ?? 'Run code to see output'}</pre>
-                                {testCaseOutputs[activeTestCaseIndex] && (String(testCaseOutputs[activeTestCaseIndex].output ?? '').trim() === String(testCases[activeTestCaseIndex].expected_output ?? '').trim()
+                                {testCaseOutputs[activeTestCaseIndex] && (String(testCaseOutputs[activeTestCaseIndex].output ?? '').trim() === String(visibleTestCases[activeTestCaseIndex].expected_output ?? '').trim()
                                   ? <CheckCircle2 className="text-green-500 shrink-0" size={16}/>
                                   : <XCircle className="text-red-500 shrink-0" size={16}/>
                                 )}
