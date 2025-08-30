@@ -11,4 +11,5 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     password = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now()) # New field
+    problem_solved_cnt = Column(Integer,nullable=False, default = 0) # new field
 

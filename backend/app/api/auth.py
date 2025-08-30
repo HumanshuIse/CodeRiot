@@ -77,7 +77,8 @@ def get_profile(current_user: User = Depends(get_current_user), db: Session = De
         "username": current_user.username,
         "email": current_user.email,
         "created_at": current_user.created_at,
-        "problems_contributed_count": problems_contributed_count
+        "problems_contributed_count": problems_contributed_count,
+        "problem_solved_cnt": current_user.problem_solved_cnt or 0
     }
 
 @router.post("/token", response_model=Token)

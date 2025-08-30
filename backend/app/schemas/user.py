@@ -24,6 +24,7 @@ class UserOut(BaseModel):
     email: EmailStr
     created_at: datetime # Account creation timestamp
     problems_contributed_count: int # Count of problems contributed by this user
+    problem_solved_cnt: int # number of problems solved by user
 
     class Config:
         from_attributes = True # Enable ORM mode for SQLAlchemy compatibility
