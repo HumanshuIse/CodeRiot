@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { User as UserIcon, Mail, Loader2, FilePlus, Calendar, Code } from 'lucide-react';
+import { User as UserIcon, Mail, Loader2, FilePlus, Calendar, Code, CheckSquare } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
@@ -48,7 +48,7 @@ const UserProfile = ({ onToast }) => { // Removed setActiveTab, now receives nav
     };
 
     fetchUserProfile();
-  }, [onToast, navigate]); // Add navigate to dependency array
+  }, [onToast, navigate, backendUrl]); // Add backendUrl to dependency array
 
   const fontPixelClassName = "font-pixel bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent text-shadow-neon";
   const fontTechClassName = "font-tech text-gray-300";
@@ -123,6 +123,14 @@ const UserProfile = ({ onToast }) => { // Removed setActiveTab, now receives nav
               </div>
             </div>
 
+            <div className="flex items-center space-x-4">
+              <CheckSquare className="w-8 h-8 text-teal-400" />
+              <div>
+                <p className="text-gray-400 text-sm font-tech">Problems Solved</p>
+                <p className="text-xl font-semibold font-tech">{userData.problem_solved_cnt ?? 0}</p>
+              </div>
+            </div>
+
             <div className="pt-6 border-t border-gray-800 mt-6 text-center">
               <Button onClick={() => navigate('/submit-problem')} className={buttonClassName}> {/* Use navigate */}
                 <FilePlus className="w-5 h-5 mr-2" />
@@ -137,3 +145,4 @@ const UserProfile = ({ onToast }) => { // Removed setActiveTab, now receives nav
 };
 
 export default UserProfile;
+
