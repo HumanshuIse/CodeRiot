@@ -1,10 +1,10 @@
 // src/pages/Matchmaking.jsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
-import { Users, Swords, XCircle, Loader, Shield, Zap } from 'lucide-react';
+import { Users, Swords, XCircle, Loader, Shield, Zap, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-// MODIFIED: Import the useMatch hook
 import { useMatch } from '../context/MatchContext';
+
 
 const PlayerCard = ({ username, isOpponent = false }) => (
     <div className="bg-gray-900/50 pixel-border p-6 text-center w-64 h-48 flex flex-col justify-center items-center animate-glow-slow border-cyan-500/50">
@@ -18,7 +18,6 @@ const PlayerCard = ({ username, isOpponent = false }) => (
 const backendUrl = import.meta.env.VITE_API_URL;
 const wsUrl = import.meta.env.VITE_WS_URL;
 
-// MODIFIED: Removed onMatchFound from props
 const Matchmaking = ({ userId, username, onToast }) => {
     const [status, setStatus] = useState('idle');
     const [matchDetails, setMatchDetails] = useState(null);
@@ -27,8 +26,8 @@ const Matchmaking = ({ userId, username, onToast }) => {
     
     const socketRef = useRef(null);
     const navigate = useNavigate();
-    // MODIFIED: Get context functions
-    const { startMatch, endMatch } = useMatch();
+    // --- MODIFIED: Get activeMatch from the context as well ---
+    const { startMatch, endMatch, activeMatch } = useMatch();
 
     const fetchOpponentUsername = useCallback(async (opponentId) => {
         try {
@@ -43,7 +42,8 @@ const Matchmaking = ({ userId, username, onToast }) => {
     }, [backendUrl]);
 
     useEffect(() => {
-        if (status === 'searching' && !socketRef.current) {
+        // This effect should only run if there isn't an active match
+        if (!activeMatch && status === 'searching' && !socketRef.current) {
             const token = localStorage.getItem('token');
             const newSocket = new WebSocket(`${wsUrl}/api/match/ws/matchmaking?token=${token}`);
             socketRef.current = newSocket;
@@ -91,14 +91,13 @@ const Matchmaking = ({ userId, username, onToast }) => {
                 socketRef.current = null;
             }
         };
-    }, [status, userId, onToast, fetchOpponentUsername, wsUrl]);
+    }, [status, userId, onToast, fetchOpponentUsername, activeMatch, wsUrl]);
 
     useEffect(() => {
         let timerId;
         if (status === 'matched' && countdown > 0) {
             timerId = setTimeout(() => setCountdown(countdown - 1), 1000);
         } else if (status === 'matched' && countdown === 0) {
-            // MODIFIED: Use the context to start the match
             startMatch(matchDetails);
             navigate('/editor');
         }
@@ -110,8 +109,7 @@ const Matchmaking = ({ userId, username, onToast }) => {
             onToast('Still connecting to user session.', 'error');
             return;
         }
-        // MODIFIED: Use context to clear any old match data
-        endMatch();
+        endMatch(); // This is now safe to call, as this button won't be visible during a match
         setStatus('searching');
     };
 
@@ -198,7 +196,26 @@ const Matchmaking = ({ userId, username, onToast }) => {
     return (
         <div className="min-h-screen bg-black flex items-center justify-center p-4">
             <div className="w-full max-w-4xl">
-                {renderContent()}
+                {/* --- MODIFIED: Conditionally render based on activeMatch --- */}
+                {activeMatch ? (
+                    <div className="text-center animate-fade-in">
+                         <h2 className="text-4xl font-pixel mb-4 bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent text-shadow-subtle">
+                            Battle in Progress!
+                        </h2>
+                        <p className="text-gray-300 font-tech mb-8">You are currently in an active match. Focus, warrior!</p>
+                        <button
+                            onClick={() => navigate('/editor')}
+                            className="bg-gradient-to-r from-red-600 to-orange-500 text-white font-tech text-2xl rounded-xl px-12 py-6 transition-all duration-200 shadow-lg hover:scale-105 animate-glow"
+                        >
+                            <div className="flex items-center justify-center">
+                                <Swords className="w-8 h-8 mr-4" />
+                                Return to Battle
+                            </div>
+                        </button>
+                    </div>
+                ) : (
+                    renderContent()
+                )}
             </div>
         </div>
     );
