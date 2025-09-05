@@ -3,6 +3,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { BrowserRouter, Routes, Route, useNavigate, useSearchParams } from 'react-router-dom';
 
+// MODIFIED: Import new context and component
+import { MatchProvider, useMatch } from './context/MatchContext';
+import ReturnToMatchButton from './components/ReturnToMatchButton';
+
 // Import Components
 import Navbar from './components/Navbar';
 import Toast from './components/Toast';
@@ -10,14 +14,14 @@ import UserLogin from './components/UserLogin';
 import UserRegister from './components/UserRegister';
 import CodeEditor from './components/CodeEditor';
 import ProblemSubmissionForm from './components/ProblemSubmissionForm';
-import ForgotPassword from './components/ForgotPassword'; // New import
+import ForgotPassword from './components/ForgotPassword';
 
 // Import Pages
 import Home from './pages/Home';
 import UserProfile from './pages/UserProfile';
 import Matchmaking from './pages/Matchmaking';
 import AboutUs from './pages/AboutUs';
-import ResetPasswordPage from './pages/ResetPasswordPage'; // New import
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 // --- GoogleSignInButton Component ---
 const GoogleIcon = () => (
@@ -54,7 +58,7 @@ const AuthCallbackPage = ({ onLoginSuccess, showToast }) => {
   useEffect(() => {
     const token = searchParams.get('token');
     if (token) {
-      onLoginSuccess(token, navigate);
+      onLoginSuccess(token);
     } else {
       showToast('Google authentication failed. Please try again.', 'error');
       navigate('/auth');
@@ -74,8 +78,7 @@ const AuthCallbackPage = ({ onLoginSuccess, showToast }) => {
 
 // --- AuthPage Component (Updated for Forgot Password) ---
 const AuthPage = ({ authTab, setAuthTab, onLoginSuccess, showToast }) => {
-    // State to switch between login/register and forgot password views
-    const [view, setView] = useState('main'); // 'main' or 'forgot-password'
+    const [view, setView] = useState('main'); 
 
     const renderContent = () => {
         if (view === 'forgot-password') {
@@ -122,10 +125,27 @@ const AuthPage = ({ authTab, setAuthTab, onLoginSuccess, showToast }) => {
 
 // --- Main App Component ---
 const App = () => {
+  return (
+    // MODIFIED: Wrap the BrowserRouter with MatchProvider
+    <MatchProvider>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </MatchProvider>
+  );
+};
+
+// --- AppContent for Routing ---
+const AppContent = () => {
   const [toastInfo, setToastInfo] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState('');
   const [userId, setUserId] = useState(null);
+
+  // MODIFIED: Get the endMatch function from our new context
+  const { endMatch } = useMatch();
+  const navigate = useNavigate();
+  const [authTab, setAuthTab] = useState('login');
 
   const showToast = useCallback((message, type) => {
     setToastInfo({ message, type });
@@ -135,19 +155,19 @@ const App = () => {
     setToastInfo(null);
   };
 
-  const handleLogout = useCallback((navigate) => {
+  // MODIFIED: Update logout to use the context function
+  const handleLogout = useCallback(() => {
     setIsLoggedIn(false);
     setUsername('');
     setUserId(null);
     localStorage.removeItem('token');
-    localStorage.removeItem('activeMatch');
-    localStorage.removeItem('matchTime');
+    endMatch(); // This now clears match state from context and localStorage
     navigate('/');
     showToast('Logged out successfully', 'success');
-  }, [showToast]);
+  }, [showToast, navigate, endMatch]);
 
   const backendUrl = import.meta.env.VITE_API_URL;
-  const fetchUserProfile = useCallback(async (token, navigate) => {
+  const fetchUserProfile = useCallback(async (token) => {
     try {
       const response = await axios.get(`${backendUrl}/api/auth/profile`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -155,74 +175,31 @@ const App = () => {
       setIsLoggedIn(true);
       setUsername(response.data.username);
       setUserId(response.data.id);
-      return response.data;
     } catch (error) {
       console.error("Failed to fetch user profile:", error);
       if (error.response && (error.response.status === 401 || error.response.status === 403)) {
         showToast("Your session expired. Please log in again.", "error");
-        handleLogout(navigate);
+        handleLogout();
       }
-      throw error;
     }
   }, [backendUrl, showToast, handleLogout]);
 
-  const handleLogin = useCallback(async (token, navigate) => {
+  const handleLogin = useCallback(async (token) => {
     localStorage.setItem('token', token);
-    try {
-      await fetchUserProfile(token, navigate);
-      navigate('/profile');
-      showToast('Login successful!', 'success');
-    } catch (error) {
-      // Error is handled in fetchUserProfile
-    }
-  }, [fetchUserProfile, showToast]);
-
-  const handleMatchFound = useCallback((matchData, navigate) => {
-    localStorage.setItem('activeMatch', JSON.stringify(matchData));
-    localStorage.setItem('matchTime', '0');
-    navigate('/editor');
-  }, []);
+    await fetchUserProfile(token);
+    navigate('/profile');
+    showToast('Login successful!', 'success');
+  }, [fetchUserProfile, showToast, navigate]);
+  
+  // REMOVED: handleMatchFound is no longer needed here
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const pseudoNavigate = (path) => window.location.pathname = path;
     if (token) {
-      fetchUserProfile(token, pseudoNavigate).catch(() => {});
+      fetchUserProfile(token).catch(() => {});
     }
   }, [fetchUserProfile]);
 
-
-  return (
-    <BrowserRouter>
-      <AppContent
-        toastInfo={toastInfo}
-        hideToast={hideToast}
-        isLoggedIn={isLoggedIn}
-        username={username}
-        handleLogout={handleLogout}
-        handleLogin={handleLogin}
-        userId={userId}
-        handleMatchFound={handleMatchFound}
-        showToast={showToast}
-      />
-    </BrowserRouter>
-  );
-};
-
-// --- AppContent for Routing ---
-const AppContent = ({
-  toastInfo,
-  hideToast,
-  isLoggedIn,
-  username,
-  handleLogout,
-  handleLogin,
-  userId,
-  handleMatchFound,
-  showToast,
-}) => {
-  const navigate = useNavigate();
-  const [authTab, setAuthTab] = useState('login');
 
   const handleGetStarted = useCallback(() => {
     navigate('/auth');
@@ -239,32 +216,35 @@ const AppContent = ({
       <Navbar
         isLoggedIn={isLoggedIn}
         username={username}
-        onLogout={() => handleLogout(navigate)}
+        onLogout={handleLogout}
       />
+      
+      {/* MODIFIED: Add the button here so it's visible on all pages */}
+      <ReturnToMatchButton />
+
       <Routes>
         <Route path="/" element={<Home onGetStarted={handleGetStarted} />} />
         <Route path="/editor" element={
-          isLoggedIn ? <CodeEditor onToast={showToast} /> : <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
+          isLoggedIn ? <CodeEditor onToast={showToast} /> : <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={handleLogin} showToast={showToast} />
         } />
         <Route path="/matchmaking" element={
-          isLoggedIn ? <Matchmaking userId={userId} username={username} onToast={showToast} onMatchFound={(matchData) => handleMatchFound(matchData, navigate)} /> : <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
+          isLoggedIn ? <Matchmaking userId={userId} username={username} onToast={showToast} /> : <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={handleLogin} showToast={showToast} />
         } />
         <Route path="/leaderboard" element={ <div className="min-h-screen flex items-center justify-center text-white font-pixel text-2xl">Leaderboard Coming Soon!</div> } />
         <Route path="/profile" element={
-          isLoggedIn ? <UserProfile onToast={showToast} navigate={navigate} /> : <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
+          isLoggedIn ? <UserProfile onToast={showToast} navigate={navigate} /> : <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={handleLogin} showToast={showToast} />
         } />
         <Route path="/submit-problem" element={
-          isLoggedIn ? <ProblemSubmissionForm onToast={showToast} /> : <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
+          isLoggedIn ? <ProblemSubmissionForm onToast={showToast} /> : <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={handleLogin} showToast={showToast} />
         } />
         <Route path="/about" element={<AboutUs />} />
         <Route path="/auth" element={
-          <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
+          <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={handleLogin} showToast={showToast} />
         } />
         <Route path="/auth/callback" element={
-          <AuthCallbackPage onLoginSuccess={(token) => handleLogin(token, navigate)} showToast={showToast} />
+          <AuthCallbackPage onLoginSuccess={handleLogin} showToast={showToast} />
         } />
         
-        {/* --- New Route for Reset Password Page --- */}
         <Route path="/reset-password" element={<ResetPasswordPage showToast={showToast} />} />
 
       </Routes>

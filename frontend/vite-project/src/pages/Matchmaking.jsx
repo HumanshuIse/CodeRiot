@@ -3,6 +3,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { Users, Swords, XCircle, Loader, Shield, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+// MODIFIED: Import the useMatch hook
+import { useMatch } from '../context/MatchContext';
 
 const PlayerCard = ({ username, isOpponent = false }) => (
     <div className="bg-gray-900/50 pixel-border p-6 text-center w-64 h-48 flex flex-col justify-center items-center animate-glow-slow border-cyan-500/50">
@@ -16,7 +18,8 @@ const PlayerCard = ({ username, isOpponent = false }) => (
 const backendUrl = import.meta.env.VITE_API_URL;
 const wsUrl = import.meta.env.VITE_WS_URL;
 
-const Matchmaking = ({ userId, username, onToast, onMatchFound }) => {
+// MODIFIED: Removed onMatchFound from props
+const Matchmaking = ({ userId, username, onToast }) => {
     const [status, setStatus] = useState('idle');
     const [matchDetails, setMatchDetails] = useState(null);
     const [opponentUsername, setOpponentUsername] = useState('Opponent');
@@ -24,6 +27,8 @@ const Matchmaking = ({ userId, username, onToast, onMatchFound }) => {
     
     const socketRef = useRef(null);
     const navigate = useNavigate();
+    // MODIFIED: Get context functions
+    const { startMatch, endMatch } = useMatch();
 
     const fetchOpponentUsername = useCallback(async (opponentId) => {
         try {
@@ -35,7 +40,7 @@ const Matchmaking = ({ userId, username, onToast, onMatchFound }) => {
             console.error("Failed to fetch opponent's username", error);
             setOpponentUsername(`User #${opponentId}`);
         }
-    }, []);
+    }, [backendUrl]);
 
     useEffect(() => {
         if (status === 'searching' && !socketRef.current) {
@@ -86,25 +91,27 @@ const Matchmaking = ({ userId, username, onToast, onMatchFound }) => {
                 socketRef.current = null;
             }
         };
-    }, [status, userId, onToast, fetchOpponentUsername]);
+    }, [status, userId, onToast, fetchOpponentUsername, wsUrl]);
 
     useEffect(() => {
         let timerId;
         if (status === 'matched' && countdown > 0) {
             timerId = setTimeout(() => setCountdown(countdown - 1), 1000);
         } else if (status === 'matched' && countdown === 0) {
-            onMatchFound(matchDetails, navigate);
+            // MODIFIED: Use the context to start the match
+            startMatch(matchDetails);
+            navigate('/editor');
         }
         return () => clearTimeout(timerId);
-    }, [status, countdown, matchDetails, onMatchFound, navigate]);
+    }, [status, countdown, matchDetails, startMatch, navigate]);
 
     const handleJoinQueue = () => {
         if (!userId) {
             onToast('Still connecting to user session.', 'error');
             return;
         }
-        localStorage.removeItem('activeMatch');
-        localStorage.removeItem('matchTime');
+        // MODIFIED: Use context to clear any old match data
+        endMatch();
         setStatus('searching');
     };
 

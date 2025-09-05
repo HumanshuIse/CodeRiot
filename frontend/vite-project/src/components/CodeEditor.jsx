@@ -3,6 +3,8 @@ import React, { useState, useEffect, useRef, Suspense } from 'react';
 import axios from 'axios';
 import { Play, Pause, UploadCloud, Loader, CheckCircle2, XCircle, FileText, BarChart2, LogOut, Lightbulb } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+// MODIFIED: Import the useMatch hook
+import { useMatch } from '../context/MatchContext';
 
 // Dynamically import components that were causing build issues.
 const Split = React.lazy(() => import('react-split'));
@@ -32,6 +34,9 @@ const LoadingFallback = () => (
 );
 
 const CodeEditor = ({ onToast }) => {
+  // MODIFIED: Get state and functions from the context
+  const { activeMatch, endMatch } = useMatch();
+
   const [problem, setProblem] = useState(null);
   const [match, setMatch] = useState(null);
   const navigate = useNavigate();
@@ -60,9 +65,9 @@ const CodeEditor = ({ onToast }) => {
   const HINT_API_URL = `${backendUrl}/api/problems`;
   const wsRef = useRef(null);
 
+  // MODIFIED: This useEffect is now driven by the activeMatch from context
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const activeMatch = JSON.parse(localStorage.getItem('activeMatch'));
 
     if (!activeMatch) {
       onToast("No active match found.", "error");
@@ -90,10 +95,7 @@ const CodeEditor = ({ onToast }) => {
         case 'opponent_quit':
           setIsTimerRunning(false);
           onToast("Opponent has left the match.", "info");
-          localStorage.removeItem('activeMatch');
-          localStorage.removeItem('matchTime');
-          setMatch(null);
-          setProblem(null);
+          endMatch(); // Use context to end match
           setTimeout(() => navigate('/matchmaking'), 3000);
           break;
         case 'opponent_reconnected':
@@ -101,8 +103,7 @@ const CodeEditor = ({ onToast }) => {
           break;
         case 'error':
           onToast(`Match Error: ${data.detail}`, 'error');
-          localStorage.removeItem('activeMatch');
-          localStorage.removeItem('matchTime');
+          endMatch(); // Use context to end match
           setTimeout(() => navigate('/matchmaking'), 3000);
           break;
         default:
@@ -121,7 +122,7 @@ const CodeEditor = ({ onToast }) => {
         wsRef.current.close();
       }
     };
-  }, [navigate, onToast]);
+  }, [activeMatch, navigate, onToast, endMatch, wsUrl]);
 
   useEffect(() => {
     let timerId = null;
@@ -174,8 +175,8 @@ const CodeEditor = ({ onToast }) => {
       await axios.post(`${backendUrl}/api/match/quit`, { match_id: match.match_id }, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      localStorage.removeItem('activeMatch');
-      localStorage.removeItem('matchTime');
+      // MODIFIED: Use context to end match
+      endMatch();
       onToast("You have left the match.", "info");
       navigate('/matchmaking');
     } catch (error) {
@@ -220,10 +221,12 @@ const CodeEditor = ({ onToast }) => {
         
         setSubmissionResult(response.data.status);
         
-        if (response.data.status === 'Accepted') {
-            onToast("Congratulations! You solved the problem!", "success");
-            localStorage.removeItem('activeMatch');
-            localStorage.removeItem('matchTime');
+        if (response.data.status.startsWith('Accepted')) {
+            onToast("Congratulations! You solved the problem! redirecting to matchmaking", "success");
+            // MODIFIED: Use context to end match
+            setTimeout(()=>{
+              endMatch();
+            },4000);
         }
     } catch (error) {
         console.error("Submission failed:", error);
@@ -267,7 +270,6 @@ const CodeEditor = ({ onToast }) => {
     );
   }
   
-  // New variable to hold only the visible test cases (first two)
   const visibleTestCases = testCases.slice(0, 2);
 
   return (
