@@ -3,7 +3,6 @@ import asyncio
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
 from app.db.database import get_db
 from app.models.problem import Problem
 from app.models.submission import Submission
@@ -81,6 +80,24 @@ async def create_submission(
         status=final_status
     )
     db.add(new_submission)
+
+    # --- NEW LOGIC START ---
+    # Only increment solved count if the submission is accepted AND the user hasn't solved it before.
+    if final_status.startswith("Accepted"):
+        # Check if the user has any previous "Accepted" submissions for this problem
+        existing_accepted_submission = db.query(Submission).filter(
+            Submission.user_id == current_user.id,
+            Submission.problem_id == submission_data.problem_id,
+            Submission.status.like("Accepted%")
+        ).first()
+
+        # If this is the first time the user is solving this problem correctly, increment their solved count
+        if not existing_accepted_submission:
+            if current_user.problem_solved_cnt is None:
+                current_user.problem_solved_cnt = 0
+            current_user.problem_solved_cnt += 1
+    # --- NEW LOGIC END ---
+
     db.commit()
     db.refresh(new_submission)
 

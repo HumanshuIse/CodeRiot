@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api import auth,match,user,submission
+from app.api import auth,match,user,submission,stats
 from app.db.database import Base, engine
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -35,6 +35,7 @@ app.include_router(new_problems.router, prefix="/api/problems", tags=["problems"
 app.include_router(user.router, prefix = "/api",tags= ['users'])
 app.include_router(submission.router, prefix='/api',tags = ['submissions'])
 app.include_router(hint.router,prefix ='/api',tags = ['hints'])
+app.include_router(stats.router,prefix='/api/stats',tags=['stats'])
 @app.get("/")
 def begin():
     return {"Welcome to coderiot"}

@@ -25,11 +25,8 @@ def create_py_template(meta):
 def create_cpp_template(meta):
     """Creates a basic C++ frontend template for stdin/stdout."""
     return """#include <iostream>
-#include <vector>
-#include <string>
-// Add other necessary headers
-
-// It's a good practice to use a solve function
+#include <bits/stdc++.h>
+using namespace std;
 void solve() {
     // Read from std::cin
     // Write to std::cout

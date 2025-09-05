@@ -6,7 +6,7 @@ import { Code, Trophy, Sword, Timer, Target, ArrowRight, Play, Star, Github, Zap
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-
+import axios from "axios";
 
 export default function Home({ onGetStarted }) {
   const navigate = useNavigate();
@@ -15,9 +15,41 @@ export default function Home({ onGetStarted }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-
+  const backendUrl = import.meta.env.VITE_API_URL;
   const words = ["CodeRiot", "Battle", "Compete", "Conquer", "Code"];
   const currentWord = words[currentIndex];
+  const [stats, setStats] = useState([
+    { number: "10K+", label: "ACTIVE CODERS" },
+    { number: "50K+", label: "BATTLES FOUGHT" },
+    { number: "500+", label: "DSA PROBLEMS" },
+    { number: "24/7", label: "LIVE MATCHES" },
+  ]);
+
+  // const formatStatNumber = (num) => {
+  //   if (num >= 1000) {
+  //     return `${Math.floor(num / 1000)}K+`;
+  //   }
+  //   return num.toString();
+  // };
+
+  useEffect(()=>{
+    const fetchStats = async () => {
+      try{
+      const response = await axios.get(`${backendUrl}/api/stats/`);
+      const stat_data = response.data;
+      console.log("Fetched stats:",stat_data);
+      setStats([
+        { number: (stat_data.active_coders), label: "ACTIVE CODERS" },
+        { number: (stat_data.battles_fought), label: "BATTLES FOUGHT" },
+        { number: (stat_data.dsa_problems), label: "DSA PROBLEMS" },
+        { number: "24/7", label: "LIVE MATCHES" }, // This can remain static
+      ]);
+    }catch(error){
+      console.error("Error fetching stats:",error);
+    }
+    };
+    fetchStats();
+  },[])
 
   useEffect(() => {
     setIsVisible(true);
@@ -75,13 +107,6 @@ export default function Home({ onGetStarted }) {
       description: "Track progress and compete for the top spot on dynamic leaderboards.",
       color: "from-green-500 to-emerald-500",
     },
-  ];
-
-  const stats = [
-    { number: "10K+", label: "ACTIVE CODERS" },
-    { number: "50K+", label: "BATTLES FOUGHT" },
-    { number: "500+", label: "DSA PROBLEMS" },
-    { number: "24/7", label: "LIVE MATCHES" },
   ];
 
   const FloatingCodeBlock = ({ children, style = {}, delay = 0, size = "text-xl", textColor = "text-green-400", borderColor = "border-green-500/30", bgColor = "bg-gray-800/30" }) => (

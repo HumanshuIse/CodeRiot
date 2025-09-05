@@ -21,6 +21,7 @@ REDIS_HOST = os.getenv("REDIS_HOST")
 REDIS_PORT = os.getenv("REDIS_PORT")
 redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
 MATCHMAKING_QUEUE_KEY = os.getenv("MATCHMAKING_QUEUE_KEY")
+BATTLES_FOUGHT_KEY = os.getenv("BATTLES_FOUGHT_KEY")
 router = APIRouter()
 
 class QuitMatchRequest(BaseModel):
@@ -88,7 +89,7 @@ async def attempt_to_create_match(db: Session):
             match_key = f"match:{match_id}"
             redis_client.hmset(match_key, {"player1": player1_id, "player2": player2_id})
             redis_client.expire(match_key, 7200) # Expire after 2 hours
-            
+            redis_client.incr(BATTLES_FOUGHT_KEY)
             if isinstance(problem.test_cases, dict):
                 problem.test_cases = problem.test_cases.get('sample', [])
 
