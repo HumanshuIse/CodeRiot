@@ -26,7 +26,6 @@ const Matchmaking = ({ userId, username, onToast }) => {
     
     const socketRef = useRef(null);
     const navigate = useNavigate();
-    // --- MODIFIED: Get activeMatch from the context as well ---
     const { startMatch, endMatch, activeMatch } = useMatch();
 
     const fetchOpponentUsername = useCallback(async (opponentId) => {
@@ -42,7 +41,6 @@ const Matchmaking = ({ userId, username, onToast }) => {
     }, [backendUrl]);
 
     useEffect(() => {
-        // This effect should only run if there isn't an active match
         if (!activeMatch && status === 'searching' && !socketRef.current) {
             const token = localStorage.getItem('token');
             const newSocket = new WebSocket(`${wsUrl}/api/match/ws/matchmaking?token=${token}`);
@@ -109,7 +107,7 @@ const Matchmaking = ({ userId, username, onToast }) => {
             onToast('Still connecting to user session.', 'error');
             return;
         }
-        endMatch(); // This is now safe to call, as this button won't be visible during a match
+        endMatch();
         setStatus('searching');
     };
 
@@ -158,7 +156,8 @@ const Matchmaking = ({ userId, username, onToast }) => {
                             <div className="absolute inset-4 border-4 border-cyan-500/50 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
                             <Loader className="w-16 h-16 text-cyan-400 animate-spin-slow" />
                         </div>
-                        <button onClick={handleLeaveQueue} className="mt-8 flex items-center mx-auto bg-red-600 text-white font-tech text-lg rounded-xl px-8 py-3 hover:bg-red-700 transition-all duration-200 shadow-lg" >
+                        {/* MODIFIED: Increased margin from mt-8 to mt-16 */}
+                        <button onClick={handleLeaveQueue} className="mt-16 flex items-center mx-auto bg-red-600 text-white font-tech text-lg rounded-xl px-8 py-3 hover:bg-red-700 transition-all duration-200 shadow-lg" >
                             <XCircle className="w-5 h-5 mr-2" />
                             Cancel Search
                         </button>
@@ -182,7 +181,12 @@ const Matchmaking = ({ userId, username, onToast }) => {
                             Enter the Arena
                         </h2>
                         <p className="text-gray-300 font-tech mb-12">Challenge a random developer and prove your skills.</p>
-                        <button onClick={handleJoinQueue} disabled={!userId} className={` bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-tech text-2xl  rounded-xl px-12 py-6 transition-all duration-200 shadow-lg ${!userId  ? 'opacity-50 cursor-not-allowed'  : 'hover:scale-105 animate-glow'} `} >
+                        {/* MODIFIED: Removed animate-glow */}
+                        <button 
+                            onClick={handleJoinQueue} 
+                            disabled={!userId} 
+                            className={`bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-tech text-2xl rounded-xl px-12 py-6 transition-all duration-200 shadow-lg ${!userId ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}`}
+                        >
                             <div className="flex items-center justify-center">
                                 <Users className="w-8 h-8 mr-4" />
                                 {userId ? 'Find Match' : 'Connecting...'}
@@ -196,7 +200,6 @@ const Matchmaking = ({ userId, username, onToast }) => {
     return (
         <div className="min-h-screen bg-black flex items-center justify-center p-4">
             <div className="w-full max-w-4xl">
-                {/* --- MODIFIED: Conditionally render based on activeMatch --- */}
                 {activeMatch ? (
                     <div className="text-center animate-fade-in">
                          <h2 className="text-4xl font-pixel mb-4 bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent text-shadow-subtle">

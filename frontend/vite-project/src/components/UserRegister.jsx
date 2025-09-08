@@ -1,4 +1,4 @@
-// src/components/UserRegister.jsx
+// // src/components/UserRegister.jsx
 import React, { useState } from 'react';
 import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
@@ -96,7 +96,7 @@ const UserRegister = ({ onToast, onLoginSuccess }) => {
           </div>
         </div>
       </div>
-      <button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-cyan-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed pixel-border animate-glow">
+      <button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-cyan-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed pixel-border">
         {isLoading ? (
           <div className="flex items-center justify-center">
             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
@@ -110,4 +110,4 @@ const UserRegister = ({ onToast, onLoginSuccess }) => {
   );
 };
 
-export default UserRegister;
+export default UserRegister;  
