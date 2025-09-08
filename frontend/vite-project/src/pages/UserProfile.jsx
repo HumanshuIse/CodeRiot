@@ -3,18 +3,21 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { User as UserIcon, Mail, Loader2, FilePlus, Calendar, Code, CheckSquare } from 'lucide-react';
+// --- V V V --- ADD NEW ICONS --- V V V ---
+import { User as UserIcon, Mail, Loader2, FilePlus, Calendar, Code, CheckSquare, History } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { useNavigate } from 'react-router-dom';
 
-const UserProfile = ({ onToast }) => { // Removed setActiveTab, now receives navigate
+const UserProfile = ({ onToast }) => {
   const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const navigate = useNavigate(); // Initialize useNavigate
+  const navigate = useNavigate();
   const backendUrl = import.meta.env.VITE_API_URL;
+
   useEffect(() => {
+    // ... (existing useEffect hook remains unchanged)
     const fetchUserProfile = async () => {
       setIsLoading(true);
       setError(null);
@@ -48,14 +51,18 @@ const UserProfile = ({ onToast }) => { // Removed setActiveTab, now receives nav
     };
 
     fetchUserProfile();
-  }, [onToast, navigate, backendUrl]); // Add backendUrl to dependency array
+  }, [onToast, navigate, backendUrl]);
 
   const fontPixelClassName = "font-pixel bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent text-shadow-neon";
   const fontTechClassName = "font-tech text-gray-300";
   const cardClassName = "bg-gray-900/70 backdrop-blur-sm rounded-lg shadow-xl p-8 border border-gray-700 pixel-border animate-glow-slow";
   const buttonClassName = "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 font-tech font-semibold text-base rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105";
+  // --- V V V --- ADD A NEW BUTTON STYLE --- V V V ---
+  const secondaryButtonClassName = "bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-6 py-3 font-tech font-semibold text-base rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105";
+
 
   if (isLoading) {
+    // ... (existing loading state remains unchanged)
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center font-tech">
         <Loader2 className="w-8 h-8 animate-spin mr-3 text-blue-400" />
@@ -69,6 +76,7 @@ const UserProfile = ({ onToast }) => { // Removed setActiveTab, now receives nav
   }
 
   const formatDateTime = (isoString) => {
+    // ... (existing formatDateTime function remains unchanged)
     const date = new Date(isoString);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
@@ -92,6 +100,7 @@ const UserProfile = ({ onToast }) => { // Removed setActiveTab, now receives nav
             <p className={`text-lg ${fontTechClassName}`}>Your personal details.</p>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* ... (existing user details remain unchanged) */}
             <div className="flex items-center space-x-4">
               <UserIcon className="w-8 h-8 text-cyan-400" />
               <div>
@@ -131,12 +140,18 @@ const UserProfile = ({ onToast }) => { // Removed setActiveTab, now receives nav
               </div>
             </div>
 
-            <div className="pt-6 border-t border-gray-800 mt-6 text-center">
-              <Button onClick={() => navigate('/submit-problem')} className={buttonClassName}> {/* Use navigate */}
+            {/* --- V V V --- MODIFY THE BUTTONS SECTION --- V V V --- */}
+            <div className="pt-6 border-t border-gray-800 mt-6 text-center space-y-4">
+              <Button onClick={() => navigate('/submissions')} className={secondaryButtonClassName}>
+                <History className="w-5 h-5 mr-2" />
+                View Submissions
+              </Button>
+              <Button onClick={() => navigate('/submit-problem')} className={buttonClassName}>
                 <FilePlus className="w-5 h-5 mr-2" />
                 Contribute a Problem
               </Button>
             </div>
+            {/* --- ^ ^ ^ --- END OF MODIFICATION --- ^ ^ ^ --- */}
           </CardContent>
         </Card>
       </div>
@@ -145,4 +160,3 @@ const UserProfile = ({ onToast }) => { // Removed setActiveTab, now receives nav
 };
 
 export default UserProfile;
-

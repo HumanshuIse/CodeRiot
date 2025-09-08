@@ -22,3 +22,22 @@ class SubmissionOut(BaseModel):
 
     class Config:
          from_attributes = True
+
+class ProblemInfo(BaseModel):
+    id: int
+    title: str
+
+    class Config:
+        from_attributes = True
+
+# A new, detailed schema specifically for the submission history page
+class SubmissionHistoryOut(BaseModel):
+    id: int
+    language: str
+    code: str
+    status: str
+    submitted_at: datetime
+    problem: ProblemInfo # Nests the problem title and ID
+
+    class Config:
+        from_attributes = True

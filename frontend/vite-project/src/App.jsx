@@ -22,6 +22,7 @@ import UserProfile from './pages/UserProfile';
 import Matchmaking from './pages/Matchmaking';
 import AboutUs from './pages/AboutUs';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import SubmissionsPage from './pages/SubmissionsPage';
 
 // --- GoogleSignInButton Component ---
 const GoogleIcon = () => (
@@ -246,7 +247,9 @@ const AppContent = () => {
         } />
         
         <Route path="/reset-password" element={<ResetPasswordPage showToast={showToast} />} />
-
+        <Route path="/submissions" element={
+                    isLoggedIn ? <SubmissionsPage onToast={showToast} /> : <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={handleLogin} showToast={showToast} />
+        } />
       </Routes>
     </div>
   );

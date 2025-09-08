@@ -69,7 +69,7 @@ async def create_submission(
             break
 
     if final_status == "Accepted":
-        final_status = f"Accepted ({total_cases}/{total_cases})"
+        final_status = f"Accepted"
 
     new_submission = Submission(
         user_id=current_user.id,
