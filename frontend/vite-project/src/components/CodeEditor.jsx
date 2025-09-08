@@ -3,10 +3,20 @@ import React, { useState, useEffect, useRef, Suspense } from 'react';
 import axios from 'axios';
 import { Play, Pause, UploadCloud, Loader, CheckCircle2, XCircle, FileText, BarChart2, LogOut, Lightbulb } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-// MODIFIED: Import the useMatch hook
 import { useMatch } from '../context/MatchContext';
 
-// Dynamically import components that were causing build issues.
+// Import the shadcn/ui component
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+// Dynamically import components
 const Split = React.lazy(() => import('react-split'));
 const Editor = React.lazy(() => import('@monaco-editor/react'));
 
@@ -34,7 +44,6 @@ const LoadingFallback = () => (
 );
 
 const CodeEditor = ({ onToast }) => {
-  // MODIFIED: Get state and functions from the context
   const { activeMatch, endMatch } = useMatch();
 
   const [problem, setProblem] = useState(null);
@@ -57,6 +66,10 @@ const CodeEditor = ({ onToast }) => {
   const [hint, setHint] = useState('');
   const [showHint, setShowHint] = useState(false);  
 
+  // State for the exit countdown
+  const [showExitCountdown, setShowExitCountdown] = useState(false);
+  const [exitCountdown, setExitCountdown] = useState(10);
+
   const backendUrl = import.meta.env.VITE_API_URL;
   const wsUrl = import.meta.env.VITE_WS_URL;
   const judgeServerUrl = import.meta.env.VITE_JUDGE_SERVER_URL;
@@ -65,7 +78,7 @@ const CodeEditor = ({ onToast }) => {
   const HINT_API_URL = `${backendUrl}/api/problems`;
   const wsRef = useRef(null);
 
-  // MODIFIED: This useEffect is now driven by the activeMatch from context
+  // useEffect for setting up the match and WebSocket
   useEffect(() => {
     const token = localStorage.getItem('token');
 
@@ -95,7 +108,7 @@ const CodeEditor = ({ onToast }) => {
         case 'opponent_quit':
           setIsTimerRunning(false);
           onToast("Opponent has left the match.", "info");
-          endMatch(); // Use context to end match
+          endMatch();
           setTimeout(() => navigate('/matchmaking'), 3000);
           break;
         case 'opponent_reconnected':
@@ -103,7 +116,7 @@ const CodeEditor = ({ onToast }) => {
           break;
         case 'error':
           onToast(`Match Error: ${data.detail}`, 'error');
-          endMatch(); // Use context to end match
+          endMatch();
           setTimeout(() => navigate('/matchmaking'), 3000);
           break;
         default:
@@ -124,6 +137,23 @@ const CodeEditor = ({ onToast }) => {
     };
   }, [activeMatch, navigate, onToast, endMatch, wsUrl]);
 
+  // useEffect for the exit countdown logic
+  useEffect(() => {
+    if (!showExitCountdown) return;
+
+    if (exitCountdown <= 0) {
+      endMatch();
+      return; 
+    }
+
+    const timerId = setInterval(() => {
+      setExitCountdown(prev => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timerId);
+  }, [showExitCountdown, exitCountdown, endMatch]);
+
+  // useEffect for the match timer
   useEffect(() => {
     let timerId = null;
     if (isTimerRunning && match) {
@@ -138,6 +168,7 @@ const CodeEditor = ({ onToast }) => {
     return () => clearInterval(timerId);
   }, [isTimerRunning, match]);
 
+  // useEffect for language/problem changes
   useEffect(() => {
     if (problem) {
       const templateKey = `frontend_template_${language}`;
@@ -151,6 +182,7 @@ const CodeEditor = ({ onToast }) => {
     }
   }, [problem, language]);
   
+  // useEffect to clear opponent notification
   useEffect(()=>{
     if(opponentNotification) {
       const timer = setTimeout(() => {
@@ -175,7 +207,6 @@ const CodeEditor = ({ onToast }) => {
       await axios.post(`${backendUrl}/api/match/quit`, { match_id: match.match_id }, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      // MODIFIED: Use context to end match
       endMatch();
       onToast("You have left the match.", "info");
       navigate('/matchmaking');
@@ -222,11 +253,10 @@ const CodeEditor = ({ onToast }) => {
         setSubmissionResult(response.data.status);
         
         if (response.data.status.startsWith('Accepted')) {
-            onToast("Congratulations! You solved the problem! redirecting to matchmaking", "success");
-            // MODIFIED: Use context to end match
-            setTimeout(()=>{
-              endMatch();
-            },4000);
+            onToast("Congratulations! You solved the problem!", "success");
+            // Start the countdown by showing the AlertDialog
+            setShowExitCountdown(true);
+            setExitCountdown(10); // Reset countdown to 10 seconds
         }
     } catch (error) {
         console.error("Submission failed:", error);
@@ -275,6 +305,34 @@ const CodeEditor = ({ onToast }) => {
   return (
     <Suspense fallback={<LoadingFallback />}>
       <div className="h-screen bg-black text-white p-2 font-tech">
+        
+        <AlertDialog open={showExitCountdown}>
+          <AlertDialogContent className="bg-gray-800 border-gray-700 text-white font-tech">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="font-pixel text-2xl text-center text-green-400 flex items-center justify-center gap-2">
+                <CheckCircle2 />
+                Success!
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-center text-gray-300 pt-2">
+                You have solved the problem. Well done!
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="text-center my-4">
+              <p className="font-mono text-lg">
+                Exiting match in <span className="text-yellow-400 font-bold tracking-wider">{exitCountdown}</span>s...
+              </p>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogAction 
+                onClick={endMatch}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold"
+              >
+                Exit Now
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         {opponentNotification && (
           <div className="absolute top-4 right-4 bg-blue-500 text-white p-3 rounded-lg shadow-lg z-50 animate-pulse">
             <p>📣 {opponentNotification}</p>

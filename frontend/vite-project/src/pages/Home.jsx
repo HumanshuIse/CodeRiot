@@ -19,9 +19,9 @@ export default function Home({ onGetStarted }) {
   const words = ["CodeRiot", "Battle", "Compete", "Conquer", "Code"];
   const currentWord = words[currentIndex];
   const [stats, setStats] = useState([
-    { number: "10K+", label: "ACTIVE CODERS" },
-    { number: "50K+", label: "BATTLES FOUGHT" },
-    { number: "500+", label: "DSA PROBLEMS" },
+    { number: "-", label: "ACTIVE CODERS" },
+    { number: "-", label: "BATTLES FOUGHT" },
+    { number: "-", label: "DSA PROBLEMS" },
     { number: "24/7", label: "LIVE MATCHES" },
   ]);
 
