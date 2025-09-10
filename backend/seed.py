@@ -21,7 +21,7 @@ SYSTEM_USER_ID = 1
 
 DSA_PROBLEMS_METADATA = [
     # --------------------------------------------------------------------------
-    # Easy Problems (15)
+    # Easy Problems
     # --------------------------------------------------------------------------
     {
         "title": "Two Sum",
@@ -129,27 +129,6 @@ DSA_PROBLEMS_METADATA = [
         "constraints": "The number of nodes in both lists is in the range [0, 50].\n-100 <= Node.val <= 100\nBoth `list1` and `list2` are sorted in non-decreasing order."
     },
     {
-        "title": "Maximum Depth of Binary Tree",
-        "description": "Given the root of a binary tree, return its maximum depth.\n\nInput format:\nA single line of space-separated integers representing the tree in level-order, with 'null' for empty nodes.",
-        "difficulty": "Easy",
-        "tags": ["Tree", "DFS", "BFS"],
-        "test_cases": {
-            "sample": [
-                { "input": "3 9 20 null null 15 7", "expected_output": "3" },
-                { "input": "1 null 2", "expected_output": "2" },
-                { "input": "null", "expected_output": "0" },
-                { "input": "0", "expected_output": "1" },
-                { "input": "1 2 3 4 5", "expected_output": "3" },
-                { "input": "1 2 null 3 null 4 null 5", "expected_output": "5" },
-                { "input": "1 null 2 null 3 null 4 null 5", "expected_output": "5" },
-                { "input": "0 -3 -2 null 1", "expected_output": "3" },
-                { "input": "5 4 8 11 null 13 4 7 2 null null null 1", "expected_output": "4" },
-                { "input": "1 2 2 3 3 null null 4 4", "expected_output": "4" },
-            ]
-        },
-        "constraints": "The number of nodes in the tree is in the range [0, 10^4].\n-100 <= Node.val <= 100"
-    },
-    {
         "title": "Best Time to Buy and Sell Stock",
         "description": "You are given an array `prices` where `prices[i]` is the price of a given stock on the `i`th day. You want to maximize your profit by choosing a single day to buy one stock and choosing a different day in the future to sell that stock. Return the maximum profit you can achieve. If you cannot achieve any profit, return 0.\n\nInput format:\nThe first line contains an integer `n`, the size of the array.\nThe second line contains `n` space-separated integers for the `prices` array.",
         "difficulty": "Easy",
@@ -169,27 +148,6 @@ DSA_PROBLEMS_METADATA = [
             ]
         },
         "constraints": "1 <= prices.length <= 10^5\n0 <= prices[i] <= 10^4"
-    },
-    {
-        "title": "Invert Binary Tree",
-        "description": "Given the root of a binary tree, invert the tree, and return its root.\n\nInput format:\nA single line of space-separated integers representing the tree in level-order, with 'null' for empty nodes.",
-        "difficulty": "Easy",
-        "tags": ["Tree", "DFS", "BFS"],
-        "test_cases": {
-            "sample": [
-                { "input": "4 2 7 1 3 6 9", "expected_output": "4 7 2 9 6 3 1" },
-                { "input": "2 1 3", "expected_output": "2 3 1" },
-                { "input": "null", "expected_output": "null" },
-                { "input": "1", "expected_output": "1" },
-                { "input": "1 2", "expected_output": "1 null 2" },
-                { "input": "1 null 2", "expected_output": "1 2" },
-                { "input": "1 2 3 null 4", "expected_output": "1 3 2 4" },
-                { "input": "3 1 5 null 2 4 6", "expected_output": "3 5 1 6 4 2" },
-                { "input": "1 2 3 4 5 6 7", "expected_output": "1 3 2 7 6 5 4" },
-                { "input": "10 5 15 2 7 12 20", "expected_output": "10 15 5 20 12 7 2" },
-            ]
-        },
-        "constraints": "The number of nodes in the tree is in the range [0, 100].\n-100 <= Node.val <= 100"
     },
     {
         "title": "Linked List Cycle",
@@ -265,8 +223,8 @@ DSA_PROBLEMS_METADATA = [
                 { "input": "7\n2 2 1 1 1 2 2", "expected_output": "2" },
                 { "input": "1\n1", "expected_output": "1" },
                 { "input": "5\n6 6 6 7 7", "expected_output": "6" },
-                { "input": "10\n1 1 1 1 1 2 2 2 2 2", "expected_output": "1" }, # Fails if logic is just >
-                { "input": "4\n-1 -1 2 2", "expected_output": "-1" }, # Fails if logic is just >
+                { "input": "10\n1 1 1 1 1 1 2 2 2 2", "expected_output": "1" },
+                { "input": "5\n-1 -1 2 2 -1", "expected_output": "-1" },
                 { "input": "3\n0 0 1", "expected_output": "0" },
                 { "input": "6\n3 3 4 2 4 4", "expected_output": "4" },
                 { "input": "5\n1 2 1 2 1", "expected_output": "1" },
@@ -291,7 +249,7 @@ DSA_PROBLEMS_METADATA = [
                 { "input": "5\n-10\n-10 -5 0 5 10", "expected_output": "0" },
                 { "input": "1\n-1\n5", "expected_output": "-1" },
                 { "input": "10\n7\n1 2 3 4 5 6 7 8 9 10", "expected_output": "6" },
-                { "input": "2\n2\n2 2", "expected_output": "0" },
+                { "input": "2\n3\n2 5", "expected_output": "-1" },
             ]
         },
         "constraints": "1 <= nums.length <= 10^4\n-10^4 < nums[i], target < 10^4\nAll the integers in `nums` are unique.\n`nums` is sorted in ascending order."
@@ -340,7 +298,7 @@ DSA_PROBLEMS_METADATA = [
     },
     
     # --------------------------------------------------------------------------
-    # Medium Problems (25)
+    # Medium Problems
     # --------------------------------------------------------------------------
     {
         "title": "Product of Array Except Self",
@@ -362,48 +320,6 @@ DSA_PROBLEMS_METADATA = [
             ]
         },
         "constraints": "2 <= nums.length <= 10^5\n-30 <= nums[i] <= 30\nThe product of any prefix or suffix of `nums` is guaranteed to fit in a 32-bit integer."
-    },
-    {
-        "title": "Validate Binary Search Tree",
-        "description": "Given the root of a binary tree, determine if it is a valid binary search tree (BST).\n\nInput format:\nA single line of space-separated integers representing the tree in level-order, with 'null' for empty nodes.",
-        "difficulty": "Medium",
-        "tags": ["Tree", "DFS"],
-        "test_cases": {
-            "sample": [
-                { "input": "2 1 3", "expected_output": "true" },
-                { "input": "5 1 4 null null 3 6", "expected_output": "false" },
-                { "input": "1 1", "expected_output": "false" },
-                { "input": "5 4 6 null null 3 7", "expected_output": "false" },
-                { "input": "1", "expected_output": "true" },
-                { "input": "null", "expected_output": "true" },
-                { "input": "2147483647", "expected_output": "true" },
-                { "input": "2 2 2", "expected_output": "false" },
-                { "input": "3 1 5 0 2 4 6", "expected_output": "true" },
-                { "input": "10 5 15 null null 6 20", "expected_output": "false" },
-            ]
-        },
-        "constraints": "The number of nodes in the tree is in the range [1, 10^4].\n-2^31 <= Node.val <= 2^31 - 1"
-    },
-    {
-        "title": "Kth Smallest Element in a BST",
-        "description": "Given the root of a binary search tree, and an integer `k`, return the `k`th smallest value (1-indexed) of all the values of the nodes in the tree.\n\nInput format:\nThe first line contains an integer `k`.\nThe second line contains space-separated integers for the tree (level-order, with 'null' for empty nodes).",
-        "difficulty": "Medium",
-        "tags": ["Tree", "DFS", "Inorder Traversal"],
-        "test_cases": {
-            "sample": [
-                { "input": "1\n3 1 4 null 2", "expected_output": "1" },
-                { "input": "3\n5 3 6 2 4 1", "expected_output": "3" }, # Incorrect tree structure, k=3 should be 4
-                { "input": "3\n5 3 6 2 4 null null 1", "expected_output": "4" },
-                { "input": "1\n1", "expected_output": "1" },
-                { "input": "2\n2 1", "expected_output": "2" },
-                { "input": "4\n5 3 8 1 4 6 9", "expected_output": "5" },
-                { "input": "1\n2 null 3 null 4 null 5", "expected_output": "2" }, # Skewed Tree
-                { "input": "5\n10 5 15 3 7 12 18 1 4 6 8 11 13 16 20", "expected_output": "7" },
-                { "input": "15\n10 5 15 3 7 12 18 1 4 6 8 11 13 16 20", "expected_output": "20" },
-                { "input": "1\n10 5 15 3 7 12 18 1 4 6 8 11 13 16 20", "expected_output": "1" },
-            ]
-        },
-        "constraints": "The number of nodes in the tree is `n`.\n1 <= k <= n <= 10^4\n0 <= Node.val <= 10^5"
     },
     {
         "title": "Container With Most Water",
@@ -441,7 +357,7 @@ DSA_PROBLEMS_METADATA = [
                 { "input": "5\n-2 0 1 1 2", "expected_output": "-2 0 2\n-2 1 1" },
                 { "input": "7\n-1 0 1 2 -1 -4 0", "expected_output": "-1 -1 2\n-1 0 1" },
                 { "input": "4\n1 2 -2 -1", "expected_output": "" },
-                { "input": "8\n-4 -2 -2 -2 0 1 2 2", "expected_output": "-4 2 2\n-2 0 2\n-2 -2 4" }, # Requires careful duplicate handling
+                { "input": "8\n-4 -2 -2 -2 0 1 2 2", "expected_output": "-4 2 2\n-2 0 2" },
                 { "input": "10\n3 0 -2 -1 1 2 -3 4 -5 5", "expected_output": "-5 1 4\n-5 2 3\n-3 0 3\n-3 1 2\n-2 -1 3\n-2 0 2\n-1 0 1" },
             ]
         },
@@ -456,13 +372,13 @@ DSA_PROBLEMS_METADATA = [
             "sample": [
                 { "input": "2\n6\n1 1 1 2 2 3", "expected_output": "1 2" },
                 { "input": "1\n1\n1", "expected_output": "1" },
-                { "input": "1\n2\n1 2", "expected_output": "1 2" }, # Order doesn't matter
-                { "input": "2\n5\n4 1 -1 2 -1", "expected_output": "-1 1 2 4" }, # k larger than unique elements
-                { "input": "2\n5\n4 1 -1 2 -1 2 4", "expected_output": "-1 2 4 1" },
-                { "input": "3\n10\n3 0 1 0 1 2 2 3 3 0", "expected_output": "0 3 1 2" },
+                { "input": "1\n3\n1 1 2", "expected_output": "1" },
+                { "input": "1\n6\n-1 -1 1 1 2 3", "expected_output": "-1 1" },
+                { "input": "2\n6\n5 5 5 1 1 2", "expected_output": "5 1" },
+                { "input": "3\n10\n3 0 1 0 1 2 3 3 3 0", "expected_output": "3 0 1" },
                 { "input": "1\n3\n-1 -1 -1", "expected_output": "-1" },
-                { "input": "4\n12\n1 1 2 2 3 3 4 4 5 5 6 6", "expected_output": "1 2 3 4 5 6" },
-                { "input": "2\n7\n5 5 5 6 6 7 7", "expected_output": "5 6 7" },
+                { "input": "2\n8\n1 1 2 2 3 3 3 4", "expected_output": "3 1 2" },
+                { "input": "2\n7\n5 5 5 6 6 7 8", "expected_output": "5 6" },
                 { "input": "1\n6\n1 2 3 4 5 6", "expected_output": "1 2 3 4 5 6" },
             ]
         },
@@ -481,7 +397,7 @@ DSA_PROBLEMS_METADATA = [
                 { "input": "2\na b", "expected_output": "a\nb" },
                 { "input": "5\nill lil lli illi liil", "expected_output": "liil\nilli\nlil lli ill" },
                 { "input": "3\nabb bba cab", "expected_output": "cab\nabb bba" },
-                { "input": "7\ndddddddddg gdddddddddd", "expected_output": "gdddddddddd\ndddddddddg" },
+                { "input": "2\ndddddddddg gdddddddddd", "expected_output": "gdddddddddd\ndddddddddg" },
                 { "input": "1\nt", "expected_output": "t" },
                 { "input": "4\ntop pot opt tpo", "expected_output": "tpo opt pot top" },
                 { "input": "0\n", "expected_output": "" },
@@ -501,8 +417,8 @@ DSA_PROBLEMS_METADATA = [
                 { "input": "0\n", "expected_output": "" },
                 { "input": "3\nlint\ncode\nlove", "expected_output": "lint\ncode\nlove" },
                 { "input": "2\nwe\nsay", "expected_output": "we\nsay" },
-                { "input": "1\nhello#world", "expected_output": "hello#world" }, # Challenging case
-                { "input": "3\n\n#\n", "expected_output": "\n#\n" }, # Empty strings
+                { "input": "1\nhello#world", "expected_output": "hello#world" },
+                { "input": "3\n\n#\n", "expected_output": "\n#\n" },
                 { "input": "2\n10#\nhello", "expected_output": "10#\nhello" },
                 { "input": "1\n#", "expected_output": "#" },
                 { "input": "4\nGo\nEagles\n\nFly", "expected_output": "Go\nEagles\n\nFly" },
@@ -544,7 +460,7 @@ DSA_PROBLEMS_METADATA = [
                 { "input": "1: 2\n2: 1", "expected_output": "1: 2\n2: 1" },
                 { "input": "1: 2 3\n2: 1 3\n3: 1 2", "expected_output": "1: 2 3\n2: 1 3\n3: 1 2" },
                 { "input": "1: 2\n2: 3\n3: 4\n4: 1", "expected_output": "1: 2\n2: 3\n3: 4\n4: 1" },
-                { "input": "1: 1", "expected_output": "1: 1" }, # Self-loop
+                { "input": "1: 1", "expected_output": "1: 1" },
                 { "input": "1: 2\n2: 3\n3: 1", "expected_output": "1: 2\n2: 3\n3: 1" },
                 { "input": "1: 2\n2: 3\n3: 4\n4: 5\n5: 1", "expected_output": "1: 2\n2: 3\n3: 4\n4: 5\n5: 1" },
                 { "input": "1: 2 3 4\n2: 1\n3: 1\n4: 1", "expected_output": "1: 2 3 4\n2: 1\n3: 1\n4: 1" },
@@ -627,10 +543,10 @@ DSA_PROBLEMS_METADATA = [
                 { "input": "1\n1\n2", "expected_output": "" },
                 { "input": "1\n1\n1", "expected_output": "1" },
                 { "input": "4\n2\n2 4", "expected_output": "2 2\n4" },
-                { "input": "30\n6\n2 3 5 7 11 13", "expected_output": "2 2 2 2 2 2 2 2 2 2 2 2 2 2 2\n..." }, # Expected output is complex, check logic
+                { "input": "30\n6\n2 3 5 7 11 13", "expected_output": "2 2 2 2 2 2 2 2 2 2 2 2 2 2 2\n2 2 2 2 2 2 2 2 2 2 2 2 3 3\n2 2 2 2 2 2 2 2 2 2 2 3 5\n2 2 2 2 2 2 2 2 2 2 7 3\n2 2 2 2 2 2 2 2 3 5 3\n2 2 2 2 2 2 2 2 7 5\n2 2 2 2 2 2 2 3 3 3 3\n2 2 2 2 2 2 2 3 5 5\n2 2 2 2 2 2 2 3 7 3\n2 2 2 2 2 2 2 5 5 3\n2 2 2 2 2 2 3 3 3 5\n2 2 2 2 2 2 3 7 5\n2 2 2 2 2 2 5 5 5\n2 2 2 2 2 3 3 3 3 3\n2 2 2 2 2 3 3 5 5\n2 2 2 2 2 3 7 3 3\n2 2 2 2 2 5 5 3 3\n2 2 2 2 2 7 5 3\n2 2 2 2 3 3 3 3 5\n2 2 2 2 3 3 7 5\n2 2 2 2 3 5 5 5\n2 2 2 2 5 5 3 3 3\n2 2 2 2 7 5 5\n2 2 2 3 3 3 3 3 3\n2 2 2 3 3 3 5 5\n2 2 2 3 3 7 3 3\n2 2 2 3 5 5 3 3\n2 2 2 3 7 5 3\n2 2 2 5 5 5 3\n2 2 3 3 3 3 3 5\n2 2 3 3 3 7 5\n2 2 3 3 5 5 5\n2 2 3 5 5 3 3 3\n2 2 3 7 5 5\n2 2 5 5 5 5\n2 3 3 3 3 3 3 3\n2 3 3 3 3 5 5\n2 3 3 3 7 3 3\n2 3 3 5 5 3 3\n2 3 3 7 5 3\n2 3 5 5 5 3\n2 5 5 5 5 3\n2 7 7 7 7\n3 3 3 3 3 3 3 3 3 3\n3 3 3 3 3 3 5 5\n3 3 3 3 3 7 3 3\n3 3 3 3 5 5 3 3\n3 3 3 3 7 5 3\n3 3 3 5 5 5 3\n3 3 5 5 5 5\n3 3 7 7 7\n3 5 5 7 7\n3 7 7 13\n5 5 5 5 5 5\n5 5 5 5 7 3\n5 5 7 13\n5 7 7 11\n7 7 7 7\n7 11 11\n7 13 7\n7 23\n11 11 5 3\n11 13 3 3\n13 13 2 2\n13 17\n23 7\n29" },
                 { "input": "5\n1\n5", "expected_output": "5" },
                 { "input": "5\n2\n1 2", "expected_output": "1 1 1 1 1\n1 1 1 2\n1 2 2" },
-                { "input": "100\n1\n1", "expected_output": "1 1 ... (100 times)" }, # TLE without good pruning
+                { "input": "100\n1\n1", "expected_output": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1" },
                 { "input": "9\n3\n3 6 9", "expected_output": "3 3 3\n3 6\n9" },
             ]
         },
@@ -855,17 +771,16 @@ DSA_PROBLEMS_METADATA = [
             "sample": [
                 { "input": "3", "expected_output": "((()))\n(()())\n(())()\n()(())\n()()()" },
                 { "input": "1", "expected_output": "()" },
-                { "input": "2", "expected_output": "(()) \n ()()" },
+                { "input": "2", "expected_output": "(())()\n()()" },
                 { "input": "0", "expected_output": "" },
                 { "input": "4", "expected_output": "(((())))\n((()()))\n((())())\n((()))()\n(()(()))\n(()()())\n(()())()\n(())(())\n(())()()\n()((()))\n()(()())\n()(())()\n()()(())\n()()()()" },
-                # More tests would be too large for output
             ]
         },
         "constraints": "1 <= n <= 8"
     },
 
     # --------------------------------------------------------------------------
-    # Hard Problems (10)
+    # Hard Problems
     # --------------------------------------------------------------------------
     {
         "title": "Merge k Sorted Lists",
@@ -961,12 +876,12 @@ DSA_PROBLEMS_METADATA = [
                 { "input": "hit cog\n6 hot dot dog lot log cog", "expected_output": "5" },
                 { "input": "hit cog\n5 hot dot dog lot log", "expected_output": "0" },
                 { "input": "a c\n3 a b c", "expected_output": "2" },
-                { "input": "cat dog\n3 cat car cor cog dog", "expected_output": "4" },
+                { "input": "cat dog\n4 cat car cor dog", "expected_output": "4" },
                 { "input": "same sane\n2 same sane", "expected_output": "2" },
-                { "input": "apple apply\n3 apple apply apply", "expected_output": "2" },
-                { "input": "apple pig\n3 apple apply apply", "expected_output": "0" },
+                { "input": "apple apply\n2 apple apply", "expected_output": "2" },
+                { "input": "apple pig\n2 apple apply", "expected_output": "0" },
                 { "input": "hot dog\n2 hot dot", "expected_output": "0" },
-                { "input": "leet code\n4 leet lent lent code", "expected_output": "3" },
+                { "input": "leet code\n3 leet lent code", "expected_output": "3" },
                 { "input": "talk walk\n1 walk", "expected_output": "2" },
             ]
         },
@@ -1004,9 +919,9 @@ DSA_PROBLEMS_METADATA = [
                 { "input": "a\na", "expected_output": "a" },
                 { "input": "a\naa", "expected_output": "" },
                 { "input": "a\nb", "expected_output": "" },
-                { "input": "ab\nA", "expected_output": "" },
+                { "input": "ab\na", "expected_output": "a" },
                 { "input": "cabwefgewcwaefgcf\ncwa", "expected_output": "cwa" },
-                { "input": "a\na", "expected_output": "a" },
+                { "input": "bba\nab", "expected_output": "ba" },
                 { "input": "aa\naa", "expected_output": "aa" },
                 { "input": "aaaaaaaaaaa\naaa", "expected_output": "aaa" },
                 { "input": "abc\ncba", "expected_output": "abc" },
@@ -1024,13 +939,13 @@ DSA_PROBLEMS_METADATA = [
                 { "input": "addNum 1\naddNum 2\nfindMedian\naddNum 3\nfindMedian", "expected_output": "1.5\n2.0" },
                 { "input": "addNum 6\nfindMedian\naddNum 10\nfindMedian\naddNum 2\nfindMedian\naddNum 6\nfindMedian\naddNum 5\nfindMedian", "expected_output": "6.0\n8.0\n6.0\n6.0\n6.0" },
                 { "input": "addNum -1\nfindMedian\naddNum -2\nfindMedian\naddNum -3\nfindMedian\naddNum -4\nfindMedian\naddNum -5\nfindMedian", "expected_output": "-1.0\n-1.5\n-2.0\n-2.5\n-3.0" },
-                { "input": "addNum 0\nfindMedian\naddNum 0\nfindMedian", "expected_output": "0.0\n0.0" },
-                { "input": "findMedian", "expected_output": "null" },
+                { "input": "addNum 0\naddNum 0\nfindMedian", "expected_output": "0.0" },
                 { "input": "addNum 1\nfindMedian", "expected_output": "1.0" },
                 { "input": "addNum 1\naddNum 2\nfindMedian", "expected_output": "1.5" },
                 { "input": "addNum 1\naddNum 2\naddNum 3\naddNum 4\nfindMedian", "expected_output": "2.5" },
                 { "input": "addNum 1\naddNum 1\nfindMedian", "expected_output": "1.0" },
                 { "input": "addNum 100\naddNum 1\nfindMedian\naddNum 50\nfindMedian", "expected_output": "50.5\n50.0" },
+                { "input": "addNum 1\naddNum 2\naddNum 3\nfindMedian", "expected_output": "2.0" },
             ]
         },
         "constraints": "-10^5 <= num <= 10^5\nThere will be at least one element in the data structure before calling `findMedian`.\nAt most 5 * 10^4 calls will be made to `addNum` and `findMedian`."
@@ -1048,34 +963,13 @@ DSA_PROBLEMS_METADATA = [
                 { "input": "1 1\na\n1\na", "expected_output": "a" },
                 { "input": "2 2\naa\naa\n2\na aaaa", "expected_output": "a aaaa" },
                 { "input": "3 3\nabc\ndef\nghi\n1\naei", "expected_output": "" },
-                { "input": "3 3\nabc\ndef\nghi\n1\nafg", "expected_output": "" },
+                { "input": "3 3\nabc\ndef\nghi\n1\nadg", "expected_output": "adg" },
                 { "input": "3 4\nabce\nsfcs\nadee\n3\nabcced see sab", "expected_output": "abcced see" },
                 { "input": "2 2\naa\naa\n1\naaaaa", "expected_output": "" },
                 { "input": "5 5\nabcde\nfghij\nklmno\npqrst\nuvwxy\n3\naflu axa bglqv", "expected_output": "aflu bglqv" },
             ]
         },
         "constraints": "m == board.length\nn == board[i].length\n1 <= m, n <= 12\nboard[i][j] is a lowercase English letter.\n1 <= words.length <= 3 * 10^4\n1 <= words[i].length <= 10\n`words[i]` consists of lowercase English letters.\nAll the strings of `words` are unique."
-    },
-     {
-        "title": "Serialize and Deserialize Binary Tree",
-        "description": "Serialization is the process of converting a data structure or object into a sequence of bits so that it can be stored in a file or memory buffer, or transmitted across a network connection link to be reconstructed later in the same or another computer environment. Design an algorithm to serialize and deserialize a binary tree. There is no restriction on how your serialization/deserialization algorithm should work.\n\nInput format:\nA single line of space-separated integers representing the tree in level-order, with 'null' for empty nodes. The output should be the same string after serialize and then deserialize.",
-        "difficulty": "Hard",
-        "tags": ["Tree", "DFS", "BFS", "Design"],
-        "test_cases": {
-            "sample": [
-                { "input": "1 2 3 null null 4 5", "expected_output": "1 2 3 null null 4 5" },
-                { "input": "null", "expected_output": "null" },
-                { "input": "1", "expected_output": "1" },
-                { "input": "1 2", "expected_output": "1 2 null" },
-                { "input": "1 null 2", "expected_output": "1 null 2" },
-                { "input": "-1 0 1", "expected_output": "-1 0 1" },
-                { "input": "1 2 3 4 5 6 7", "expected_output": "1 2 3 4 5 6 7" },
-                { "input": "5 4 8 11 null 13 4 7 2 null null null 1", "expected_output": "5 4 8 11 null 13 4 7 2 null null null null 1" },
-                { "input": "1 1 1 null 1 null 1 null 1", "expected_output": "1 1 1 null 1 null 1 null 1" },
-                { "input": "100 200 -300 400 -500", "expected_output": "100 200 -300 400 -500 null null" },
-            ]
-        },
-        "constraints": "The number of nodes in the tree is in the range [0, 10^4].\n-1000 <= Node.val <= 1000"
     },
 ]
 
