@@ -98,7 +98,7 @@ export default function Home({ onGetStarted }) {
     {
       icon: <Target className="w-5 h-5" />,
       title: "SMART MATCHING",
-      description: "Get paired with opponents of similar skill using graph algorithms.",
+      description: "Get paired with opponents of similar skill using queue-based matchmaking.",
       color: "from-purple-500 to-pink-500",
     },
     {
