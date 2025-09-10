@@ -3,7 +3,6 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-// --- V V V --- ADD NEW ICONS --- V V V ---
 import { User as UserIcon, Mail, Loader2, FilePlus, Calendar, Code, CheckSquare, History } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +16,6 @@ const UserProfile = ({ onToast }) => {
   const backendUrl = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
-    // ... (existing useEffect hook remains unchanged)
     const fetchUserProfile = async () => {
       setIsLoading(true);
       setError(null);
@@ -25,13 +23,11 @@ const UserProfile = ({ onToast }) => {
         const token = localStorage.getItem('token');
         if (!token) {
           onToast("You are not logged in.", "error");
-          navigate('/auth'); // Redirect to auth route
+          navigate('/auth');
           return;
         }
         const response = await axios.get(`${backendUrl}/api/auth/profile`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         setUserData(response.data);
       } catch (err) {
@@ -41,9 +37,9 @@ const UserProfile = ({ onToast }) => {
         setError(errorMessage);
         if (err.response && (err.response.status === 401 || err.response.status === 403)) {
           localStorage.removeItem('token');
-          navigate('/auth'); // Redirect to auth on invalid token
+          navigate('/auth');
         } else {
-          navigate('/'); // Redirect to home on other errors
+          navigate('/');
         }
       } finally {
         setIsLoading(false);
@@ -55,14 +51,11 @@ const UserProfile = ({ onToast }) => {
 
   const fontPixelClassName = "font-pixel bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent text-shadow-neon";
   const fontTechClassName = "font-tech text-gray-300";
-  const cardClassName = "bg-gray-900/70 backdrop-blur-sm rounded-lg shadow-xl p-8 border border-gray-700 pixel-border animate-glow-slow";
-  const buttonClassName = "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 font-tech font-semibold text-base rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105";
-  // --- V V V --- ADD A NEW BUTTON STYLE --- V V V ---
-  const secondaryButtonClassName = "bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-6 py-3 font-tech font-semibold text-base rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105";
-
+  const cardClassName = "bg-gray-900/70 backdrop-blur-sm rounded-lg shadow-xl border border-gray-700 pixel-border animate-glow-slow";
+  const buttonClassName = "w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-4 py-2 font-tech font-semibold text-base rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105";
+  const secondaryButtonClassName = "w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-4 py-2 font-tech font-semibold text-base rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105";
 
   if (isLoading) {
-    // ... (existing loading state remains unchanged)
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center font-tech">
         <Loader2 className="w-8 h-8 animate-spin mr-3 text-blue-400" />
@@ -74,86 +67,93 @@ const UserProfile = ({ onToast }) => {
   if (!userData) {
     return null;
   }
-
+  
   const formatDateTime = (isoString) => {
-    // ... (existing formatDateTime function remains unchanged)
     const date = new Date(isoString);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true
     });
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center py-12 px-4 relative z-10">
-      <div className="w-full max-w-md">
-        <Card className={cardClassName}>
-          <CardHeader className="text-center mb-6">
-            <CardTitle className={`text-4xl ${fontPixelClassName} mb-4`}>
-              User Profile
-            </CardTitle>
-            <p className={`text-lg ${fontTechClassName}`}>Your personal details.</p>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* ... (existing user details remain unchanged) */}
-            <div className="flex items-center space-x-4">
-              <UserIcon className="w-8 h-8 text-cyan-400" />
-              <div>
-                <p className="text-gray-400 text-sm font-tech">Username</p>
-                <p className="text-xl font-semibold font-tech">{userData.username}</p>
+    <div className="min-h-screen bg-black text-white p-4 sm:p-6 lg:p-8 font-tech">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* --- LEFT COLUMN: USER INFO --- */}
+        <div className="lg:col-span-1">
+          <Card className={cardClassName}>
+            <CardContent className="p-6 space-y-6">
+              <div className="text-center">
+                <img
+                  src={`https://api.dicebear.com/8.x/pixel-art/svg?seed=${userData.username}`}
+                  alt="User Avatar"
+                  className="w-28 h-28 rounded-full mx-auto mb-4 border-4 border-cyan-500 shadow-neon-cyan"
+                />
+                <h2 className={`text-3xl ${fontPixelClassName}`}>{userData.username}</h2>
               </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Mail className="w-8 h-8 text-blue-400" />
-              <div>
-                <p className="text-gray-400 text-sm font-tech">Email</p>
-                <p className="text-xl font-semibold font-tech">{userData.email}</p>
+              
+              <div className="border-t border-gray-700 pt-6 space-y-4">
+                 <div className="flex items-center space-x-4">
+                   <Mail className="w-6 h-6 text-blue-400" />
+                   <div>
+                     <p className="text-gray-400 text-sm">Email</p>
+                     <p className="text-lg font-semibold">{userData.email}</p>
+                   </div>
+                 </div>
+                 <div className="flex items-center space-x-4">
+                   <Calendar className="w-6 h-6 text-green-400" />
+                   <div>
+                     <p className="text-gray-400 text-sm">Joined On</p>
+                     <p className="text-lg font-semibold">{formatDateTime(userData.created_at)}</p>
+                   </div>
+                 </div>
               </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <Calendar className="w-8 h-8 text-green-400" />
-              <div>
-                <p className="text-gray-400 text-sm font-tech">Account Created At</p>
-                <p className="text-xl font-semibold font-tech">{formatDateTime(userData.created_at)}</p>
-              </div>
-            </div>
+            </CardContent>
+          </Card>
+        </div>
 
-            <div className="flex items-center space-x-4">
-              <Code className="w-8 h-8 text-orange-400" />
-              <div>
-                <p className="text-gray-400 text-sm font-tech">Problems Contributed</p>
-                <p className="text-xl font-semibold font-tech">{userData.problems_contributed_count}</p>
+        {/* --- RIGHT COLUMN: STATS & ACTIONS --- */}
+        <div className="lg:col-span-2 space-y-8">
+           <Card className={cardClassName}>
+            <CardHeader>
+              <CardTitle className={`text-xl ${fontPixelClassName}`}>Coding Stats</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="flex items-center space-x-4">
+                <CheckSquare className="w-10 h-10 text-teal-400" />
+                <div>
+                  <p className="text-gray-400 text-sm">Problems Solved</p>
+                  <p className="text-3xl font-bold">{userData.problem_solved_cnt ?? 0}</p>
+                </div>
               </div>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <CheckSquare className="w-8 h-8 text-teal-400" />
-              <div>
-                <p className="text-gray-400 text-sm font-tech">Problems Solved</p>
-                <p className="text-xl font-semibold font-tech">{userData.problem_solved_cnt ?? 0}</p>
+              <div className="flex items-center space-x-4">
+                <Code className="w-10 h-10 text-orange-400" />
+                <div>
+                  <p className="text-gray-400 text-sm">Problems Contributed</p>
+                  <p className="text-3xl font-bold">{userData.problems_contributed_count ?? 0}</p>
+                </div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* --- V V V --- MODIFY THE BUTTONS SECTION --- V V V --- */}
-            <div className="pt-6 border-t border-gray-800 mt-6 text-center space-y-4">
+          {/* --- V V V --- ACTIONS PANEL MOVED HERE --- V V V --- */}
+          <Card className={cardClassName}>
+            <CardHeader>
+              <CardTitle className={`text-xl ${fontPixelClassName}`}>Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <Button onClick={() => navigate('/submissions')} className={secondaryButtonClassName}>
-                <History className="w-5 h-5 mr-2" />
-                View Submissions
+                <History className="w-5 h-5 mr-2" /> View Submissions
               </Button>
               <Button onClick={() => navigate('/submit-problem')} className={buttonClassName}>
-                <FilePlus className="w-5 h-5 mr-2" />
-                Contribute a Problem
+                <FilePlus className="w-5 h-5 mr-2" /> Contribute Problem
               </Button>
-            </div>
-            {/* --- ^ ^ ^ --- END OF MODIFICATION --- ^ ^ ^ --- */}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+          {/* --- ^ ^ ^ --- END OF MOVED ACTIONS PANEL --- ^ ^ ^ --- */}
+        </div>
       </div>
     </div>
   );

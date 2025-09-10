@@ -15,7 +15,6 @@ const ProblemSubmissionForm = ({ onToast }) => {
     tags: [],
     tagInput: '',
     constraints: '',
-    // MODIFIED: test_cases is now a simple array.
     test_cases: [{ input: '', expected_output: '' }],
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +34,6 @@ const ProblemSubmissionForm = ({ onToast }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // MODIFIED: Simplified test case handler
   const handleTestCaseChange = (index, e) => {
     const { name, value } = e.target;
     const updatedCases = [...formData.test_cases];
@@ -43,7 +41,6 @@ const ProblemSubmissionForm = ({ onToast }) => {
     setFormData(prev => ({ ...prev, test_cases: updatedCases }));
   };
 
-  // MODIFIED: Simplified add test case handler
   const addTestCase = () => {
     setFormData(prev => ({
       ...prev,
@@ -51,7 +48,6 @@ const ProblemSubmissionForm = ({ onToast }) => {
     }));
   };
 
-  // MODIFIED: Simplified remove test case handler
   const removeTestCase = (index) => {
     if (formData.test_cases.length <= 1) {
       onToast("You must have at least one test case.", "error");
@@ -105,7 +101,6 @@ const ProblemSubmissionForm = ({ onToast }) => {
     }
   };
 
-  // MODIFIED: Simplified JSX for rendering test cases
   const TestCaseInputs = () => (
     <div>
       <h3 className={classNames.h3}>Test Cases</h3>
@@ -149,7 +144,8 @@ const ProblemSubmissionForm = ({ onToast }) => {
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-4xl bg-gray-900/70 backdrop-blur-sm rounded-lg shadow-xl p-8 border border-gray-700 pixel-border">
-        <h2 className="text-3xl font-pixel text-center mb-8 text-shadow-neon text-white">Submit Your Problem</h2>
+        {/* MODIFIED: Removed text-shadow-neon class */}
+        <h2 className="text-3xl font-pixel text-center mb-8 text-white">Submit Your Problem</h2>
         <form onSubmit={handleSubmit} className="space-y-8">
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
