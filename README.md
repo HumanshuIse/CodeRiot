@@ -124,33 +124,58 @@ You will need to create `.env` files for both the backend and frontend.
 ### Backend `.env`
 
 ```ini
-# Database
-DATABASE_URL="postgresql://user:password@localhost:5432/coderiot_db"
+# ===============================
+# 🔹 Frontend
+# ===============================
+FRONTEND_URL="http://localhost:5173"
 
-# JWT Secret
-SECRET_KEY="your-super-secret-key-for-jwt"
-ALGORITHM="HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES=60
-RESET_TOKEN_EXPIRE_MINUTES=15
-
-# Redis
+# ===============================
+# 🔹 Redis Configuration
+# ===============================
 REDIS_HOST="localhost"
 REDIS_PORT=6379
-MATCHMAKING_QUEUE_KEY="matchmaking_queue"
+MATCHMAKING_QUEUE_KEY="matchmaking:queue"
+BATTLES_FOUGHT_KEY="battles_fought_counter"
 
-# Judge Server URL (as seen from the backend)
-JUDGE_SERVER_URL="http://localhost:8001/execute"
+# ===============================
+# 🔹 Judge Server
+# ===============================
+JUDGE_SERVER_URL="http://localhost:8001"
 
-# AI Hint Service
-ollama_url="http://localhost:11434/api/generate"
-ollama_model="llama3"
+# ===============================
+# 🔹 JWT Configuration
+# ===============================
+SECRET_KEY="supersecret"
+ALGORITHM="HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES=240
+SECRET_KEY_RESET="resetsecret"
+RESET_TOKEN_EXPIRE_MINUTES=15
 
-# Frontend URL (for redirects)
-frontend_url="http://localhost:5173"
+# ===============================
+# 🔹 Database Configuration
+# ===============================
+DATABASE_URL="postgresql://postgres:password@localhost/dsa_battle"
 
-# Google OAuth
+# ===============================
+# 🔹 Ollama AI Configuration
+# ===============================
+OLLAMA_URL="http://localhost:11434/api/generate"
+OLLAMA_MODEL="gemma3"
+
+# ===============================
+# 🔹 Google OAuth Configuration
+# ===============================
 GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
+
+# ===============================
+# 🔹 SMTP Configuration
+# ===============================
+SMTP_SERVER="smtp.gmail.com"
+SMTP_PORT=587
+SMTP_USERNAME="your-email@gmail.com"
+SMTP_PASSWORD="your-app-password"
+
 ```
 
 ### Frontend `.env.local`
@@ -193,11 +218,35 @@ A summary of the available API routes. Note that some endpoints require admin pr
   * `POST /submission`: Submit code for a problem to be judged.
   * `POST /problems/{problem_id}/hint`: Request an AI-generated hint.
 
-### Admin (`/api/problems`)
+-----
 
-  * `GET /pending`: **(Admin)** Fetch all problems awaiting review.
-  * `POST /{problem_id}/approve`: **(Admin)** Approve a pending problem.
-  * `POST /{problem_id}/reject`: **(Admin)** Reject a pending problem.
+## 📸 Screenshots
+
+### 🏠 Home
+<img width="1896" height="860" alt="Screenshot 2025-09-10 145742" src="https://github.com/user-attachments/assets/690e42c8-5921-4f52-b33c-170845daaefd" />
+
+### 🔐 Google oAuth
+<img width="1894" height="870" alt="image" src="https://github.com/user-attachments/assets/6ac6b4f7-395c-43a4-90de-31e20b8e4668" />
+
+
+### 🎮 Matchmaking Lobby
+<img width="1898" height="863" alt="Screenshot 2025-09-10 145941" src="https://github.com/user-attachments/assets/0726eea6-36ca-4ef1-915f-34f933957fa4" />
+
+
+### ✍️ Code Editor & Problem View
+<img width="1895" height="860" alt="Screenshot 2025-09-01 161221" src="https://github.com/user-attachments/assets/50d1ed1d-8f38-44a0-a526-edc3ce3f1f65" />
+
+
+### ⚡ Judge Results
+<img width="1896" height="871" alt="Screenshot 2025-09-10 150203" src="https://github.com/user-attachments/assets/5ad1f7d5-d4aa-43c2-8316-238ca6de2239" />
+
+
+### 🤖 AI Hints
+<img width="1894" height="886" alt="Screenshot 2025-09-10 150307" src="https://github.com/user-attachments/assets/52498ce2-2f4a-401a-a231-4f3286612ea2" />
+
+
+
 
 -----
+
 
