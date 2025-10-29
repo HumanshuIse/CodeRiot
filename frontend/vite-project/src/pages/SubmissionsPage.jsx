@@ -5,8 +5,15 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, ServerCrash, Inbox, Clock, Code, Hash, CheckCircle, FileText } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button"; // --- NEW ---
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"; // --- NEW ---
 
 const SubmissionsPage = ({ onToast }) => {
   const [submissions, setSubmissions] = useState([]);
@@ -14,6 +21,16 @@ const SubmissionsPage = ({ onToast }) => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const backendUrl = import.meta.env.VITE_API_URL;
+
+  // --- NEW: State for analysis modal ---
+  const [analysisState, setAnalysisState] = useState({
+    isLoading: false,
+    subId: null,
+    type: null, // 'time' or 'space'
+  });
+  const [analysisResult, setAnalysisResult] = useState(null); // { title: '', content: '' }
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  // --- END NEW ---
 
   useEffect(() => {
     const fetchSubmissions = async () => {
@@ -42,6 +59,38 @@ const SubmissionsPage = ({ onToast }) => {
 
     fetchSubmissions();
   }, [onToast, navigate, backendUrl]);
+
+  // --- NEW: Handler for calling the analysis endpoint ---
+  const handleAnalyze = async (submissionId, type) => {
+    setAnalysisState({ isLoading: true, subId: submissionId, type: type });
+    setAnalysisResult(null);
+    setIsModalOpen(true); // Open the modal to show loading
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${backendUrl}/api/submissions/${submissionId}/analyze`,
+        { analysis_type: type }, // The payload
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      
+      setAnalysisResult({
+        title: type === 'time' ? 'Time Complexity Analysis' : 'Space Complexity Analysis',
+        content: response.data.analysis
+      });
+      
+    } catch (err) {
+      console.error("Failed to get analysis:", err);
+      const errorMsg = err.response?.data?.detail || "Analysis service failed.";
+      setAnalysisResult({
+        title: 'Error',
+        content: errorMsg
+      });
+    } finally {
+      setAnalysisState({ isLoading: false, subId: null, type: null });
+    }
+  };
+  // --- END NEW ---
 
   const formatDateTime = (isoString) => {
     const date = new Date(isoString);
@@ -98,13 +147,47 @@ const SubmissionsPage = ({ onToast }) => {
                         </div>
                       </div>
                     </AccordionTrigger>
+                    
+                    {/* --- MODIFIED: Added buttons inside AccordionContent --- */}
                     <AccordionContent className="bg-gray-900 rounded-b-lg p-4">
                         <pre className="bg-black rounded-md p-4 overflow-x-auto">
                             <code className={`language-${sub.language} text-sm`}>
                                 {sub.code}
                             </code>
                         </pre>
+                        {/* --- NEW: Analysis Buttons --- */}
+                        <div className="mt-4 flex space-x-4">
+                          <Button 
+                            size="sm"
+                            variant="outline"
+                            className="text-cyan-400 border-cyan-400 hover:bg-cyan-900 hover:text-cyan-300 font-tech"
+                            onClick={() => handleAnalyze(sub.id, "time")}
+                            disabled={analysisState.isLoading}
+                          >
+                            {analysisState.isLoading && analysisState.subId === sub.id && analysisState.type === 'time' 
+                              ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> 
+                              : <FileText className="w-4 h-4 mr-2" />
+                            }
+                            Analyze Time
+                          </Button>
+                          <Button 
+                            size="sm"
+                            variant="outline"
+                            className="text-orange-400 border-orange-400 hover:bg-orange-900 hover:text-orange-300 font-tech"
+                            onClick={() => handleAnalyze(sub.id, "space")}
+                            disabled={analysisState.isLoading}
+                          >
+                            {analysisState.isLoading && analysisState.subId === sub.id && analysisState.type === 'space' 
+                              ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> 
+                              : <Hash className="w-4 h-4 mr-2" />
+                            }
+                            Analyze Space
+                          </Button>
+                        </div>
+                        {/* --- END NEW --- */}
                     </AccordionContent>
+                    {/* --- END MODIFICATION --- */}
+
                   </AccordionItem>
                 ))}
               </Accordion>
@@ -112,6 +195,31 @@ const SubmissionsPage = ({ onToast }) => {
           </Card>
         )}
       </div>
+
+      {/* --- NEW: Analysis Modal --- */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="bg-gray-900 border-gray-700 text-white font-tech max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-pixel text-2xl bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+              {analysisState.isLoading ? "Analyzing..." : (analysisResult?.title || "Analysis")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 max-h-[60vh] overflow-y-auto">
+            {analysisState.isLoading ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+                <p className="ml-3">Generating analysis with AI...</p>
+              </div>
+            ) : (
+              <div className="text-gray-300 whitespace-pre-wrap text-base leading-relaxed">
+                {analysisResult?.content}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* --- END NEW --- */}
+
     </div>
   );
 };

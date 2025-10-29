@@ -8,6 +8,7 @@ from app.models.user import User
 from app.models.problem import Problem
 from app.models.submission import Submission
 from app.api import hint
+from app.api import analyze
 from dotenv import load_dotenv
 import os
 load_dotenv()
@@ -36,6 +37,7 @@ app.include_router(user.router, prefix = "/api",tags= ['users'])
 app.include_router(submission.router, prefix='/api',tags = ['submissions'])
 app.include_router(hint.router,prefix ='/api',tags = ['hints'])
 app.include_router(stats.router,prefix='/api/stats',tags=['stats'])
+app.include_router(analyze.router, prefix="/api", tags=["Analysis"])
 @app.get("/")
 def begin():
     return {"Welcome to coderiot"}
