@@ -13,7 +13,6 @@ const Navbar = ({ isLoggedIn, username, onLogout }) => {
     { id: 'home', label: 'Home', icon: HomeIcon, path: '/' },
     { id: 'matchmaking', label: 'Matchmaking', icon: Users, path: '/matchmaking' },
     { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, path: '/leaderboard' },
-    // --- V V V --- ADD THE 'About Us' OBJECT HERE --- V V V ---
     { id: 'about', label: 'About Us', icon: Info, path: '/about' },
   ];
 

@@ -45,3 +45,12 @@ class EmailSchema(BaseModel):
 class ResetPasswordSchema(BaseModel):
     token: str
     new_password: str
+
+class LeaderboardEntry(BaseModel):
+    rank: int
+    user_id: int
+    username: str
+    problems_solved: int
+
+    class Config:
+        from_attributes = True

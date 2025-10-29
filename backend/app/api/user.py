@@ -1,12 +1,13 @@
 # app/routes/user.py
 
-from fastapi import APIRouter, Depends, HTTPException
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.models.user import User
 from app.models.submission import Submission
 from sqlalchemy.orm import joinedload
-from app.schemas.user import UserPublicOut # Import the new schema
+from app.schemas.user import UserPublicOut,LeaderboardEntry # Import the new schema
 from app.schemas.submission import ProblemInfo, SubmissionHistoryOut
 from app.core.security import get_current_user
 router = APIRouter()
@@ -35,3 +36,28 @@ def get_user_submissions(current_user : User = Depends(get_current_user), db: Se
         .all()
     )
     return submissions
+
+@router.get("/leaderboard", response_model=List[LeaderboardEntry])
+async def get_leaderboard(
+    limit: int = Query(default=10, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    """
+    Get top users ranked by problems solved.
+    """
+    users = db.query(User)\
+        .filter(User.problem_solved_cnt > 0)\
+        .order_by(User.problem_solved_cnt.desc())\
+        .limit(limit)\
+        .all()
+    
+    leaderboard = []
+    for rank, user in enumerate(users, start=1):
+        leaderboard.append(LeaderboardEntry(
+            rank=rank,
+            user_id=user.id,
+            username=user.username,
+            problems_solved=user.problem_solved_cnt
+        ))
+    
+    return leaderboard

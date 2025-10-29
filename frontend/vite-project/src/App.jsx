@@ -23,6 +23,7 @@ import Matchmaking from './pages/Matchmaking';
 import AboutUs from './pages/AboutUs';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import SubmissionsPage from './pages/SubmissionsPage';
+import Leaderboard from './pages/Leaderboard';
 
 // --- GoogleSignInButton Component ---
 const GoogleIcon = () => (
@@ -231,7 +232,7 @@ const AppContent = () => {
         <Route path="/matchmaking" element={
           isLoggedIn ? <Matchmaking userId={userId} username={username} onToast={showToast} /> : <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={handleLogin} showToast={showToast} />
         } />
-        <Route path="/leaderboard" element={ <div className="min-h-screen flex items-center justify-center text-white font-pixel text-2xl">Leaderboard Coming Soon!</div> } />
+        <Route path="/leaderboard" element={<Leaderboard onToast={showToast} />} />
         <Route path="/profile" element={
           isLoggedIn ? <UserProfile onToast={showToast} navigate={navigate} /> : <AuthPage authTab={authTab} setAuthTab={setAuthTab} onLoginSuccess={handleLogin} showToast={showToast} />
         } />
